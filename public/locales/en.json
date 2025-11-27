@@ -1,0 +1,18 @@
+{
+  "title": "TransactionTracker Pro",
+  "dashboard": "Dashboard",
+  "orders": "Orders",
+  "products": "Products",
+  "customers": "Customers",
+  "payments": "Payments",
+  "reports": "Reports",
+  "settings": "Settings",
+  "addProduct": "Add Product",
+  "editProduct": "Edit Product",
+  "name": "Name",
+  "retailPrice": "Retail Price",
+  "wholesalePrice": "Wholesale Price",
+  "cancel": "Cancel",
+  "save": "Save",
+  "noProductsFound": "No products found."
+}

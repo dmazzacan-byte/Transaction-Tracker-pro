@@ -1,0 +1,18 @@
+{
+  "title": "TransactionTracker Pro",
+  "dashboard": "Tablero",
+  "orders": "Pedidos",
+  "products": "Productos",
+  "customers": "Clientes",
+  "payments": "Pagos",
+  "reports": "Reportes",
+  "settings": "Configuración",
+  "addProduct": "Añadir Producto",
+  "editProduct": "Editar Producto",
+  "name": "Nombre",
+  "retailPrice": "Precio al Detal",
+  "wholesalePrice": "Precio al Por Mayor",
+  "cancel": "Cancelar",
+  "save": "Guardar",
+  "noProductsFound": "No se encontraron productos."
+}
