@@ -1,0 +1,59 @@
+{
+  "firestore": {
+    "rules": {
+      "users": {
+        "$uid": {
+          ".read": "$uid === auth.uid",
+          ".write": "$uid === auth.uid"
+        }
+      }
+    },
+    "collections": {
+      "users": {
+        "{userId}": {
+          "products": {
+            "{productId}": {
+              "name": "string",
+              "retailPrice": "number",
+              "wholesalePrice": "number"
+            }
+          },
+          "customers": {
+            "{customerId}": {
+              "name": "string",
+              "email": "string",
+              "phone": "string",
+              "address": "string"
+            }
+          },
+          "orders": {
+            "{orderId}": {
+              "customerName": "string",
+              "customerEmail": "string",
+              "orderDate": "timestamp",
+              "total": "number",
+              "status": "string",
+              "items": [
+                {
+                  "name": "string",
+                  "quantity": "number",
+                  "price": "number"
+                }
+              ]
+            }
+          },
+          "payments": {
+            "{paymentId}": {
+              "orderId": "string",
+              "paymentDate": "timestamp",
+              "amount": "number",
+              "paymentMethod": "string",
+              "bank": "string",
+              "bankReference": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

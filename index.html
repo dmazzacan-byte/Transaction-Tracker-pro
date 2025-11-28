@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TransactionTracker Pro</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1 data-i18n="title">TransactionTracker Pro</h1>
+            <div class="language-selector">
+                <select id="language-select">
+                    <option value="en">English</option>
+                    <option value="es">Español</option>
+                </select>
+            </div>
+        </header>
+        <nav>
+            <button class="tab-button" data-tab="dashboard" data-i18n="dashboard">Dashboard</button>
+            <button class="tab-button" data-tab="orders" data-i18n="orders">Orders</button>
+            <button class="tab-button" data-tab="products" data-i18n="products">Products</button>
+            <button class="tab-button" data-tab="customers" data-i18n="customers">Customers</button>
+            <button class="tab-button" data-tab="payments" data-i18n="payments">Payments</button>
+            <button class="tab-button" data-tab="reports" data-i18n="reports">Reports</button>
+            <button class="tab-button" data-tab="settings" data-i18n="settings">Settings</button>
+        </nav>
+        <main id="main-content">
+            <div id="dashboard" class-="tab-content active">
+                <h2 data-i18n="dashboard">Dashboard</h2>
+                <div class="summary-cards">
+                    <div class="card">
+                        <h3 data-i18n="totalRevenue">Total Revenue</h3>
+                        <p id="total-revenue">$0</p>
+                    </div>
+                    <div class="card">
+                        <h3 data-i18n="totalOrders">Total Orders</h3>
+                        <p id="total-orders">0</p>
+                    </div>
+                    <div class="card">
+                        <h3 data-i18n="pendingPayments">Pending Payments</h3>
+                        <p id="pending-payments">0</p>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <h3 data-i18n="salesSummary">Sales Summary</h3>
+                    <canvas id="sales-chart"></canvas>
+                </div>
+                <div class="recent-transactions">
+                    <h3 data-i18n="recentTransactions">Recent Transactions</h3>
+                    <table id="recent-transactions-table">
+                        <thead>
+                            <tr>
+                                <th>Customer</th>
+                                <th>Date</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="orders" class="tab-content">
+                <h2 data-i18n="orders">Orders</h2>
+                <button id="add-order-btn" data-i18n="addOrder">Add Order</button>
+                <table id="orders-table">
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>Date</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+            <div id="products" class="tab-content">
+                <h2 data-i18n="products">Products</h2>
+                <button id="add-product-btn" data-i18n="addProduct">Add Product</button>
+                <table id="products-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Retail Price</th>
+                            <th>Wholesale Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+            <div id="customers" class="tab-content">
+                <h2 data-i18n="customers">Customers</h2>
+                <button id="add-customer-btn" data-i18n="addCustomer">Add Customer</button>
+                <table id="customers-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Address</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+            <div id="payments" class="tab-content">
+                <h2 data-i18n="payments">Payments</h2>
+                <button id="add-payment-btn" data-i18n="registerPayment">Register Payment</button>
+                <table id="payments-table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Method</th>
+                            <th>Bank</th>
+                            <th>Reference</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+            <div id="reports" class="tab-content">
+                <h2 data-i18n="reports">Reports</h2>
+                <div class="filters">
+                    <label for="report-start-date">Start Date:</label>
+                    <input type="date" id="report-start-date">
+                    <label for="report-end-date">End Date:</label>
+                    <input type="date" id="report-end-date">
+                    <label for="report-product">Product:</label>
+                    <select id="report-product"></select>
+                    <label for="report-customer">Customer:</label>
+                    <select id="report-customer"></select>
+                    <button id="apply-filters-btn">Apply Filters</button>
+                </div>
+                <div class="chart-container">
+                    <h3>Sales by Product</h3>
+                    <canvas id="sales-by-product-chart"></canvas>
+                </div>
+            </div>
+            <div id="settings" class="tab-content">
+                <h2 data-i18n="settings">Settings</h2>
+                <div class="data-management">
+                    <h3>Data Management</h3>
+                    <button id="download-orders-btn" data-i18n="downloadOrders">Download Orders (Excel)</button>
+                    <button id="download-payments-btn" data-i18n="downloadPayments">Download Payments (Excel)</button>
+                </div>
+            </div>
+        </main>
+    </div>
+    <div id="add-product-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2 data-i18n="addProduct">Add Product</h2>
+            <form id="add-product-form">
+                <label for="product-name">Name:</label>
+                <input type="text" id="product-name" required>
+                <label for="retail-price">Retail Price:</label>
+                <input type="number" id="retail-price" required>
+                <label for="wholesale-price">Wholesale Price:</label>
+                <input type="number" id="wholesale-price" required>
+                <button type="submit">Save</button>
+            </form>
+        </div>
+    </div>
+    <div id="add-customer-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2 data-i18n="addCustomer">Add Customer</h2>
+            <form id="add-customer-form">
+                <label for="customer-name">Name:</label>
+                <input type="text" id="customer-name" required>
+                <label for="customer-email">Email:</label>
+                <input type="email" id="customer-email" required>
+                <label for="customer-phone">Phone:</label>
+                <input type="tel" id="customer-phone" required>
+                <label for="customer-address">Address:</label>
+                <input type="text" id="customer-address" required>
+                <button type="submit">Save</button>
+            </form>
+        </div>
+    </div>
+    <div id="add-order-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2 data-i18n="addOrder">Add Order</h2>
+            <form id="add-order-form">
+                <label for="order-customer">Customer:</label>
+                <select id="order-customer" required></select>
+                <a href="#" id="add-new-customer-link">Register a new customer</a>
+
+                <h3>Items</h3>
+                <div id="order-items">
+                    <!-- Order items will be added here dynamically -->
+                </div>
+                <button type="button" id="add-item-btn">Add Item</button>
+
+                <p>Total: <span id="order-total">0</span></p>
+
+                <label for="order-status">Status:</label>
+                <select id="order-status" required>
+                    <option value="Pending">Pending</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Shipped">Shipped</option>
+                    <option value="Delivered">Delivered</option>
+                </select>
+                <button type="submit">Save</button>
+            </form>
+        </div>
+    </div>
+    <div id="add-payment-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2 data-i18n="registerPayment">Register Payment</h2>
+            <form id="add-payment-form">
+                <label for="payment-order-id">Order ID:</label>
+                <select id="payment-order-id" required></select>
+                <label for="payment-amount">Amount:</label>
+                <input type="number" id="payment-amount" required>
+                <label for="payment-method">Payment Method:</label>
+                <input type="text" id="payment-method" required>
+                <label for="payment-bank">Bank:</label>
+                <input type="text" id="payment-bank" required>
+                <label for="payment-reference">Bank Reference:</label>
+                <input type="text" id="payment-reference" required>
+                <button type="submit">Save</button>
+            </form>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>

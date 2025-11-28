@@ -1,0 +1,20 @@
+{
+    "dashboard": "Tablero",
+    "orders": "Pedidos",
+    "products": "Productos",
+    "customers": "Clientes",
+    "payments": "Pagos",
+    "reports": "Reportes",
+    "settings": "Configuración",
+    "totalRevenue": "Ingresos Totales",
+    "totalOrders": "Pedidos Totales",
+    "pendingPayments": "Pagos Pendientes",
+    "salesSummary": "Resumen de Ventas",
+    "recentTransactions": "Transacciones Recientes",
+    "addOrder": "Añadir Pedido",
+    "addProduct": "Añadir Producto",
+    "addCustomer": "Añadir Cliente",
+    "registerPayment": "Registrar Pago",
+    "downloadOrders": "Descargar Pedidos (Excel)",
+    "downloadPayments": "Descargar Pagos (Excel)"
+}

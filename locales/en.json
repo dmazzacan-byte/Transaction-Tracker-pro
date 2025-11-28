@@ -1,0 +1,20 @@
+{
+    "dashboard": "Dashboard",
+    "orders": "Orders",
+    "products": "Products",
+    "customers": "Customers",
+    "payments": "Payments",
+    "reports": "Reports",
+    "settings": "Settings",
+    "totalRevenue": "Total Revenue",
+    "totalOrders": "Total Orders",
+    "pendingPayments": "Pending Payments",
+    "salesSummary": "Sales Summary",
+    "recentTransactions": "Recent Transactions",
+    "addOrder": "Add Order",
+    "addProduct": "Add Product",
+    "addCustomer": "Add Customer",
+    "registerPayment": "Register Payment",
+    "downloadOrders": "Download Orders (Excel)",
+    "downloadPayments": "Download Payments (Excel)"
+}
