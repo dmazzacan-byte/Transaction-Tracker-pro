@@ -1,4 +1,4 @@
-import { app } from './firebase/config.js';
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
     getAuth,
     signInWithEmailAndPassword,
@@ -15,8 +15,18 @@ import {
     deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const auth = getAuth(app);
-const db = getFirestore(app);
+let app, auth, db;
+let firebaseInitialized = false;
+
+try {
+    const { firebaseConfig } = await import('/firebase/config.js');
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    firebaseInitialized = true;
+} catch (error) {
+    console.error("Firebase initialization failed:", error);
+}
 
 // Auth functions
 const login = (email, password) => signInWithEmailAndPassword(auth, email, password);
@@ -52,6 +62,7 @@ const updatePayment = (paymentId, paymentData) => updateDoc(doc(db, PAYMENTS_COL
 const deletePayment = (paymentId) => deleteDoc(doc(db, PAYMENTS_COLLECTION, paymentId));
 
 export {
+    firebaseInitialized,
     auth,
     login,
     logout,

@@ -1,4 +1,4 @@
-import { login, logout, monitorAuthState } from './firebase.js';
+import { firebaseInitialized, login, logout, monitorAuthState } from './firebase.js';
 import { initProducts } from './products.js';
 import { initCustomers } from './customers.js';
 import { initOrders } from './orders.js';
@@ -12,6 +12,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
     const loginError = document.getElementById('login-error');
     const logoutButton = document.getElementById('logout-button');
+
+    if (!firebaseInitialized) {
+        document.body.innerHTML = `
+            <div style="text-align: center; padding: 2rem;">
+                <h1>Error</h1>
+                <p>Firebase configuration is missing or invalid. Please check the console for more details.</p>
+                <p>If you are the developer, make sure you have copied <code>firebase/config.js.example</code> to <code>firebase/config.js</code> and filled in your Firebase project credentials.</p>
+            </div>
+        `;
+        return;
+    }
 
     // Monitor auth state
     monitorAuthState(user => {
