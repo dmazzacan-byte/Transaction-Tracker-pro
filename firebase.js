@@ -19,7 +19,7 @@ let app, auth, db;
 let firebaseInitialized = false;
 
 try {
-    const { firebaseConfig } = await import('/firebase/config.js');
+    const { firebaseConfig } = await import('./firebase/config.js');
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
