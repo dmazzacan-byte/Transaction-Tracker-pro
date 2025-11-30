@@ -1,0 +1,37 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Create Firebase config file
+        run: |
+          mkdir -p firebase
+          echo "export const firebaseConfig = {" > firebase/config.js
+          echo "  apiKey: '${{ secrets.APIKEY }}'," >> firebase/config.js
+          echo "  authDomain: '${{ secrets.AUTHDOMAIN }}'," >> firebase/config.js
+          echo "  projectId: '${{ secrets.PROJECTID }}'," >> firebase/config.js
+          echo "  storageBucket: '${{ secrets.STORAGEBUCKET }}'," >> firebase/config.js
+          echo "  messagingSenderId: '${{ secrets.MESSAGINGSENDERID }}'," >> firebase/config.js
+          echo "  appId: '${{ secrets.APPID }}'," >> firebase/config.js
+          echo "};" >> firebase/config.js
+
+      - name: Prepare deployment artifacts
+        run: |
+          mkdir dist
+          cp index.html style.css *.js dist/
+          cp -r firebase dist/
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: dist
