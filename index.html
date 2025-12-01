@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TransactionTracker Pro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="auth-container">
+        <div id="login-view">
+            <h2>Login</h2>
+            <form id="login-form">
+                <input type="email" id="login-email" placeholder="Email" required>
+                <input type="password" id="login-password" placeholder="Password" required>
+                <button type="submit">Login</button>
+            </form>
+            <p>Don't have an account? <a href="#" id="show-register">Register here</a></p>
+        </div>
+        <div id="register-view" class="hidden">
+            <h2>Register</h2>
+            <form id="register-form">
+                <input type="email" id="register-email" placeholder="Email" required>
+                <input type="password" id="register-password" placeholder="Password" required>
+                <button type="submit">Register</button>
+            </form>
+            <p>Already have an account? <a href="#" id="show-login">Login here</a></p>
+        </div>
+    </div>
+
+    <div id="app-container" class="hidden">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h3>TransactionTracker</h3>
+            </div>
+            <ul>
+                <li><a href="#" class="nav-link active" data-tab="dashboard"><i class="fas fa-chart-line"></i><span>Dashboard</span></a></li>
+                <li><a href="#" class="nav-link" data-tab="orders"><i class="fas fa-box"></i><span>Orders</span></a></li>
+                <li><a href="#" class="nav-link" data-tab="customers"><i class="fas fa-users"></i><span>Customers</span></a></li>
+                <li><a href="#" class="nav-link" data-tab="payments"><i class="fas fa-credit-card"></i><span>Payments</span></a></li>
+                <li><a href="#" class="nav-link" data-tab="products"><i class="fas fa-tag"></i><span>Products</span></a></li>
+                <li><a href="#" class="nav-link" data-tab="settings"><i class="fas fa-cog"></i><span>Settings</span></a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <button id="logout-btn"><i class="fas fa-sign-out-alt"></i><span>Logout</span></button>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <div id="dashboard" class="tab-content active">
+                <div class="header">
+                    <h1>Dashboard</h1>
+                    <div class="filters">
+                        <select id="dashboard-month"></select>
+                        <select id="dashboard-year"></select>
+                    </div>
+                </div>
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <h3>Daily Sales</h3>
+                        <canvas id="sales-chart"></canvas>
+                    </div>
+                    <div class="card">
+                        <h3>Pending Payments</h3>
+                        <ul id="pending-orders-list"></ul>
+                    </div>
+                    <div class="card">
+                        <h3>Sales by Product</h3>
+                        <canvas id="product-sales-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div id="orders" class="tab-content">
+                 <div class="header">
+                    <h1>Orders</h1>
+                    <button id="add-order-btn" class="btn-primary"><i class="fas fa-plus"></i> New Order</button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Customer</th>
+                                <th>Product</th>
+                                <th>Quantity</th>
+                                <th>Total</th>
+                                <th>Amount Paid</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orders-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="customers" class="tab-content">
+                <div class="header">
+                    <h1>Customers</h1>
+                    <button id="add-customer-btn" class="btn-primary"><i class="fas fa-plus"></i> New Customer</button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Phone</th>
+                                <th>Monthly Volume</th>
+                                <th>Historical Volume</th>
+                                <th>Pending Amount</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customers-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="payments" class="tab-content">
+                 <div class="header">
+                    <h1>Payments</h1>
+                    <button id="add-payment-btn" class="btn-primary"><i class="fas fa-plus"></i> New Payment</button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Customer</th>
+                                <th>Order</th>
+                                <th>Amount</th>
+                                <th>Reference</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payments-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="products" class="tab-content">
+                <div class="header">
+                    <h1>Products</h1>
+                    <button id="add-product-btn" class="btn-primary"><i class="fas fa-plus"></i> New Product</button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Retail Price</th>
+                                <th>Wholesale Price</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="settings" class="tab-content">
+                <div class="header">
+                    <h1>Settings</h1>
+                </div>
+                <div class="settings-grid">
+                    <div class="card">
+                        <h3>User Management</h3>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>Data Management</h3>
+                        <button id="backup-data-btn" class="btn-secondary"><i class="fas fa-download"></i> Backup Data (Excel)</button>
+                        <input type="file" id="restore-data-input" accept=".xlsx" style="display: none;">
+                        <button id="restore-data-btn" class="btn-secondary"><i class="fas fa-upload"></i> Restore Data</button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-backdrop" class="hidden"></div>
+
+    <div id="order-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="order-modal-title">New Order</h2>
+            <form id="order-form">
+                <input type="hidden" id="order-id">
+                <label for="order-customer">Customer:</label>
+                <select id="order-customer" required></select>
+                <label for="order-product">Product:</label>
+                <select id="order-product" required></select>
+                <label for="order-quantity">Quantity:</label>
+                <input type="number" id="order-quantity" min="1" required>
+                <label for="order-status">Payment Status:</label>
+                <select id="order-status">
+                    <option value="Pending">Pending</option>
+                    <option value="Partial">Partial</option>
+                    <option value="Paid">Paid</option>
+                </select>
+                <button type="submit" class="btn-primary">Save Order</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="customer-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="customer-modal-title">New Customer</h2>
+            <form id="customer-form">
+                <input type="hidden" id="customer-id">
+                <label for="customer-name">Name:</label>
+                <input type="text" id="customer-name" required>
+                <label for="customer-phone">Phone:</label>
+                <input type="tel" id="customer-phone">
+                <button type="submit" class="btn-primary">Save Customer</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="payment-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="payment-modal-title">New Payment</h2>
+            <form id="payment-form">
+                <input type="hidden" id="payment-id">
+                <input type="hidden" id="payment-order-id">
+                <label for="payment-order">Order:</label>
+                <select id="payment-order" required></select>
+                <label for="payment-amount">Amount:</label>
+                <input type="number" id="payment-amount" step="0.01" required>
+                 <label for="payment-reference">Bank Reference:</label>
+                <input type="text" id="payment-reference">
+                <button type="submit" class="btn-primary">Save Payment</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="product-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="product-modal-title">New Product</h2>
+            <form id="product-form">
+                <input type="hidden" id="product-id">
+                <label for="product-description">Description:</label>
+                <input type="text" id="product-description" required>
+                <label for="product-retail-price">Retail Price:</label>
+                <input type="number" id="product-retail-price" step="0.01" required>
+                <label for="product-wholesale-price">Wholesale Price:</label>
+                <input type="number" id="product-wholesale-price" step="0.01" required>
+                <button type="submit" class="btn-primary">Save Product</button>
+            </form>
+        </div>
+    </div>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
