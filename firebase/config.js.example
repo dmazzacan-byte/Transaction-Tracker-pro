@@ -1,0 +1,14 @@
+// For local development, copy this file to `firebase/config.js` and fill in your Firebase project credentials.
+// This file is ignored by Git to protect your credentials.
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyAYYYmJDKvXJTGfwQ1ZYfhzmZAjl3hoHe8",
+  authDomain: "gestionador-09021226-17c1c.firebaseapp.com",
+  projectId: "gestionador-09021226-17c1c",
+  storageBucket: "gestionador-09021226-17c1c.firebasestorage.app",
+  messagingSenderId: "22022249768",
+  appId: "1:22022249768:web:bf48a88ce0b22628bfc41d"
+};
+
+export { firebaseConfig };
