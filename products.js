@@ -67,8 +67,7 @@ const handleTableClick = async (e) => {
 
     if (target.classList.contains('edit-btn')) {
         e.preventDefault();
-        const querySnapshot = await getProducts();
-        const doc = querySnapshot.docs.find(doc => doc.id === id);
+        const doc = await getProducts().then(snapshot => snapshot.docs.find(doc => doc.id === id));
         if (doc) {
             const product = { id: doc.id, ...doc.data() };
             openModal('Edit Product', product);

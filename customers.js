@@ -3,10 +3,10 @@ import { addCustomer, getCustomers, updateCustomer, deleteCustomer } from './fir
 const customerModal = document.getElementById('customer-modal');
 const customerForm = document.getElementById('customer-form');
 const customersTableBody = document.querySelector('#customers-table tbody');
-const customerModalTitle = document.getElementById('customer-modal-title');
+const modalTitle = document.getElementById('customer-modal-title');
 
 const openModal = (title = 'Add Customer', customer = {}) => {
-    customerModalTitle.textContent = title;
+    modalTitle.textContent = title;
     customerForm.reset();
     customerForm['customer-id'].value = customer.id || '';
     customerForm['customer-name'].value = customer.name || '';
@@ -29,7 +29,7 @@ const renderCustomers = async () => {
                 <td>${customer.phone}</td>
                 <td>${customer.monthlyVolume || 0}</td>
                 <td>${customer.totalVolume || 0}</td>
-                <td>${customer.pendingAmount || 0}</td>
+                <td>${customer.dueAmount || 0}</td>
                 <td class="actions">
                     <a href="#" class="edit-btn" data-id="${customer.id}">Edit</a>
                     <a href="#" class="delete-btn" data-id="${customer.id}">Delete</a>
@@ -67,8 +67,7 @@ const handleTableClick = async (e) => {
 
     if (target.classList.contains('edit-btn')) {
         e.preventDefault();
-        const querySnapshot = await getCustomers();
-        const doc = querySnapshot.docs.find(doc => doc.id === id);
+        const doc = await getCustomers().then(snapshot => snapshot.docs.find(doc => doc.id === id));
         if (doc) {
             const customer = { id: doc.id, ...doc.data() };
             openModal('Edit Customer', customer);
@@ -85,7 +84,6 @@ const handleTableClick = async (e) => {
         }
     }
 };
-
 
 export const initCustomers = () => {
     document.getElementById('add-customer-btn').addEventListener('click', () => openModal());
