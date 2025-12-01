@@ -1,0 +1,94 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+    getAuth,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+    getFirestore,
+    collection,
+    addDoc,
+    getDocs,
+    doc,
+    updateDoc,
+    deleteDoc
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// Hardcoded Firebase configuration for simplicity
+const firebaseConfig = {
+  apiKey: "AIzaSyAYYYmJDKvXJTGfwQ1ZYfhzmZAjl3hoHe8",
+  authDomain: "gestionador-09021226-17c1c.firebaseapp.com",
+  projectId: "gestionador-09021226-17c1c",
+  storageBucket: "gestionador-09021226-17c1c.firebasestorage.app",
+  messagingSenderId: "22022249768",
+  appId: "1:22022249768:web:bf48a88ce0b22628bfc41d"
+};
+
+let app, auth, db;
+let firebaseInitialized = false;
+
+try {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    firebaseInitialized = true;
+} catch (error) {
+    console.error("Firebase initialization failed:", error);
+}
+
+// Auth functions
+const login = (email, password) => signInWithEmailAndPassword(auth, email, password);
+const logout = () => signOut(auth);
+const monitorAuthState = (callback) => onAuthStateChanged(auth, callback);
+
+// Product functions
+const PRODUCTS_COLLECTION = 'products';
+const addProduct = (productData) => addDoc(collection(db, PRODUCTS_COLLECTION), productData);
+const getProducts = () => getDocs(collection(db, PRODUCTS_COLLECTION));
+const updateProduct = (productId, productData) => updateDoc(doc(db, PRODUCTS_COLLECTION, productId), productData);
+const deleteProduct = (productId) => deleteDoc(doc(db, PRODUCTS_COLLECTION, productId));
+
+// Customer functions
+const CUSTOMERS_COLLECTION = 'customers';
+const addCustomer = (customerData) => addDoc(collection(db, CUSTOMERS_COLLECTION), customerData);
+const getCustomers = () => getDocs(collection(db, CUSTOMERS_COLLECTION));
+const updateCustomer = (customerId, customerData) => updateDoc(doc(db, CUSTOMERS_COLLECTION, customerId), customerData);
+const deleteCustomer = (customerId) => deleteDoc(doc(db, CUSTOMERS_COLLECTION, customerId));
+
+// Order functions
+const ORDERS_COLLECTION = 'orders';
+const addOrder = (orderData) => addDoc(collection(db, ORDERS_COLLECTION), orderData);
+const getOrders = () => getDocs(collection(db, ORDERS_COLLECTION));
+const updateOrder = (orderId, orderData) => updateDoc(doc(db, ORDERS_COLLECTION, orderId), orderData);
+const deleteOrder = (orderId) => deleteDoc(doc(db, ORDERS_COLLECTION, orderId));
+
+// Payment functions
+const PAYMENTS_COLLECTION = 'payments';
+const addPayment = (paymentData) => addDoc(collection(db, PAYMENTS_COLLECTION), paymentData);
+const getPayments = () => getDocs(collection(db, PAYMENTS_COLLECTION));
+const updatePayment = (paymentId, paymentData) => updateDoc(doc(db, PAYMENTS_COLLECTION, paymentId), paymentData);
+const deletePayment = (paymentId) => deleteDoc(doc(db, PAYMENTS_COLLECTION, paymentId));
+
+export {
+    firebaseInitialized,
+    login,
+    logout,
+    monitorAuthState,
+    addProduct,
+    getProducts,
+    updateProduct,
+    deleteProduct,
+    addCustomer,
+    getCustomers,
+    updateCustomer,
+    deleteCustomer,
+    addOrder,
+    getOrders,
+    updateOrder,
+    deleteOrder,
+    addPayment,
+    getPayments,
+    updatePayment,
+    deletePayment
+};
