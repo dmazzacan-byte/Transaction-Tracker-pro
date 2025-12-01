@@ -1,0 +1,40 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Replace Firebase config placeholders
+        run: |
+          sed -i "s|__API_KEY__|${{ secrets.APIKEY }}|g" firebase.js
+          sed -i "s|__AUTH_DOMAIN__|${{ secrets.AUTHDOMAIN }}|g" firebase.js
+          sed -i "s|__PROJECT_ID__|${{ secrets.PROJECTID }}|g" firebase.js
+          sed -i "s|__STORAGE_BUCKET__|${{ secrets.STORAGEBUCKET }}|g" firebase.js
+          sed -i "s|__MESSAGING_SENDER_ID__|${{ secrets.MESSAGINGSENDERID }}|g" firebase.js
+          sed -i "s|__APP_ID__|${{ secrets.APPID }}|g" firebase.js
+
+      - name: Verify file content
+        run: |
+          echo "--- Verifying firebase.js content ---"
+          cat firebase.js
+
+      - name: Prepare deployment artifacts
+        run: |
+          mkdir dist
+          cp index.html style.css *.js dist/
+          echo "--- Contents of dist directory ---"
+          ls -lR dist
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: dist
