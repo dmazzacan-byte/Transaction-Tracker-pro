@@ -18,6 +18,7 @@ import {
 let app, auth, db;
 let firebaseInitialized = false;
 
+// Intenta cargar la configuración de forma dinámica
 try {
     const { firebaseConfig } = await import('./firebase/config.js');
     app = initializeApp(firebaseConfig);
@@ -34,6 +35,15 @@ const logout = () => signOut(auth);
 const monitorAuthState = (callback) => onAuthStateChanged(auth, callback);
 
 // Product functions
+    console.error("Firebase initialization failed. This is expected on a deployed site without a config file.", error);
+}
+
+// Funciones de autenticación (verifican si Firebase está inicializado)
+const login = (email, password) => auth ? signInWithEmailAndPassword(auth, email, password) : Promise.reject("Firebase not initialized");
+const logout = () => auth ? signOut(auth) : Promise.reject("Firebase not initialized");
+const monitorAuthState = (callback) => auth ? onAuthStateChanged(auth, callback) : callback(null);
+
+// Funciones de base de datos
 const PRODUCTS_COLLECTION = 'products';
 const addProduct = (productData) => addDoc(collection(db, PRODUCTS_COLLECTION), productData);
 const getProducts = () => getDocs(collection(db, PRODUCTS_COLLECTION));
@@ -84,3 +94,4 @@ export {
     updatePayment,
     deletePayment
 };
+

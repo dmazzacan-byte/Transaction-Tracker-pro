@@ -1,4 +1,5 @@
 import { firebaseInitialized, login, logout, monitorAuthState } from './firebase.js';
+import { login, logout, monitorAuthState } from './firebase.js';
 import { initProducts } from './products.js';
 import { initCustomers } from './customers.js';
 import { initOrders } from './orders.js';
