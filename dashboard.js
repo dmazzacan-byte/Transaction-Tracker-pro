@@ -1,90 +1,123 @@
-import { getOrders, getProducts, getCustomers } from './firebase.js';
+import { getOrders, getCustomers, getProducts } from './firebase.js';
 
+const monthFilter = document.getElementById('month-filter');
+const yearFilter = document.getElementById('year-filter');
+const salesChartCanvas = document.getElementById('sales-chart');
+const pendingPaymentsTableBody = document.querySelector('#pending-payments-table tbody');
+const productSalesTableBody = document.querySelector('#product-sales-table tbody');
 let salesChart;
 
-const renderDailySalesChart = (orders) => {
-    const salesByDay = {};
-    orders.forEach(order => {
-        const date = order.date;
-        salesByDay[date] = (salesByDay[date] || 0) + order.totalValue;
+const populateFilters = () => {
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    months.forEach((month, i) => {
+        const option = `<option value="${i}">${month}</option>`;
+        monthFilter.innerHTML += option;
     });
 
-    const sortedDates = Object.keys(salesByDay).sort();
-    const chartData = sortedDates.map(date => salesByDay[date]);
+    const currentYear = new Date().getFullYear();
+    for (let i = currentYear; i >= currentYear - 5; i--) {
+        const option = `<option value="${i}">${i}</option>`;
+        yearFilter.innerHTML += option;
+    }
 
-    const ctx = document.getElementById('sales-chart').getContext('2d');
+    monthFilter.value = new Date().getMonth();
+    yearFilter.value = currentYear;
+};
+
+const renderDashboard = async () => {
+    const selectedMonth = parseInt(monthFilter.value);
+    const selectedYear = parseInt(yearFilter.value);
+
+    const [ordersSnapshot, customersSnapshot, productsSnapshot] = await Promise.all([getOrders(), getCustomers(), getProducts()]);
+    const orders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const customers = customersSnapshot.docs.reduce((acc, doc) => ({ ...acc, [doc.id]: doc.data() }), {});
+    const products = productsSnapshot.docs.reduce((acc, doc) => ({ ...acc, [doc.id]: doc.data() }), {});
+
+    const filteredOrders = orders.filter(order => {
+        const orderDate = new Date(order.date);
+        return orderDate.getMonth() === selectedMonth && orderDate.getFullYear() === selectedYear;
+    });
+
+    renderSalesChart(filteredOrders);
+    renderPendingPayments(filteredOrders, customers);
+    renderProductSales(filteredOrders, products);
+};
+
+const renderSalesChart = (orders) => {
+    const dailySales = {};
+    orders.forEach(order => {
+        const day = new Date(order.date).getDate();
+        dailySales[day] = (dailySales[day] || 0) + order.total;
+    });
+
+    const chartData = {
+        labels: Object.keys(dailySales),
+        datasets: [{
+            label: 'Daily Sales',
+            data: Object.values(dailySales),
+            backgroundColor: 'rgba(52, 152, 219, 0.5)',
+            borderColor: 'rgba(52, 152, 219, 1)',
+            borderWidth: 1
+        }]
+    };
+
     if (salesChart) {
         salesChart.destroy();
     }
-    salesChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: sortedDates,
-            datasets: [{
-                label: 'Ventas Diarias',
-                data: chartData,
-                borderColor: '#3498db',
-                tension: 0.1
-            }]
+
+    salesChart = new Chart(salesChartCanvas, {
+        type: 'bar',
+        data: chartData,
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
         }
     });
 };
 
-const renderPendingPaymentsTable = (orders, customers) => {
-    const tableBody = document.querySelector('#pending-payments-table tbody');
-    tableBody.innerHTML = '';
-    orders
-        .filter(order => order.paymentStatus !== 'Pagado')
-        .forEach(order => {
-            const customerName = customers[order.customerId]?.name || 'N/A';
+const renderPendingPayments = (orders, customers) => {
+    pendingPaymentsTableBody.innerHTML = '';
+    const pending = orders.filter(o => o.status !== 'Pagado');
+    pending.forEach(order => {
+        const customerName = customers[order.customerId]?.name || 'N/A';
+        const dueAmount = order.total - order.paid;
+        if (dueAmount > 0) {
             const row = `
                 <tr>
                     <td>${customerName}</td>
-                    <td>${order.totalValue - order.amountPaid}</td>
+                    <td>${dueAmount.toFixed(2)}</td>
                 </tr>
             `;
-            tableBody.innerHTML += row;
-        });
+            pendingPaymentsTableBody.innerHTML += row;
+        }
+    });
 };
 
-const renderProductSalesTable = (orders, products) => {
-    const tableBody = document.querySelector('#product-sales-table tbody');
-    tableBody.innerHTML = '';
-    const salesByProduct = {};
-
+const renderProductSales = (orders, products) => {
+    productSalesTableBody.innerHTML = '';
+    const sales = {};
     orders.forEach(order => {
-        const productId = order.productId;
-        salesByProduct[productId] = (salesByProduct[productId] || 0) + order.quantity;
+        const productName = products[order.productId]?.description || 'N/A';
+        sales[productName] = (sales[productName] || 0) + order.quantity;
     });
 
-    for (const productId in salesByProduct) {
-        const productName = products[productId]?.description || 'N/A';
+    for (const [productName, quantity] of Object.entries(sales)) {
         const row = `
             <tr>
                 <td>${productName}</td>
-                <td>${salesByProduct[productId]}</td>
+                <td>${quantity}</td>
             </tr>
         `;
-        tableBody.innerHTML += row;
+        productSalesTableBody.innerHTML += row;
     }
 };
 
-const fetchData = async () => {
-    const [ordersSnapshot, productsSnapshot, customersSnapshot] = await Promise.all([getOrders(), getProducts(), getCustomers()]);
-
-    const orders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-    const products = {};
-    productsSnapshot.forEach(doc => products[doc.id] = doc.data());
-
-    const customers = {};
-    customersSnapshot.forEach(doc => customers[doc.id] = doc.data());
-
-    renderDailySalesChart(orders);
-    renderPendingPaymentsTable(orders, customers);
-    renderProductSalesTable(orders, products);
-};
-
 export const initDashboard = () => {
-    fetchData();
+    populateFilters();
+    renderDashboard();
+    monthFilter.addEventListener('change', renderDashboard);
+    yearFilter.addEventListener('change', renderDashboard);
 };
