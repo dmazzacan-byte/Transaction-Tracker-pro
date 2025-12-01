@@ -1,3 +1,3 @@
 # Transaction-Tracker-pro
-//Sistema de Gestion de negocio
+///Sistema de Gestion de negocio///
 ///
