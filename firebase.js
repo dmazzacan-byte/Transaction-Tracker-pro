@@ -19,20 +19,19 @@ let app, auth, db;
 let firebaseInitialized = false;
 
 try {
-    // Busca una configuración global inyectada. Si no existe, carga el archivo local.
-    const config = typeof window !== 'undefined' && window.__FIREBASE_CONFIG__
-        ? window.__FIREBASE_CONFIG__
-        : (await import('./firebase/config.js')).firebaseConfig;
-
-    app = initializeApp(config);
+    // Importa la configuración de Firebase desde un archivo local
+    const { firebaseConfig } = await import('./firebase/config.js');
+    // Inicializa la app de Firebase con la configuración
+    app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
     firebaseInitialized = true;
 } catch (error) {
-    console.error("Error fatal al inicializar Firebase.",
-        "Para desarrollo local, asegúrate de que 'firebase/config.js' exista y sea correcto.",
-        "Para entornos desplegados, asegúrate de que la configuración de Firebase se inyecte correctamente.",
-        "Error original:", error);
+    // Si la importación falla, muestra un mensaje de error claro en la consola
+    console.error("Error: La configuración de Firebase no se encontró en 'firebase/config.js'.",
+        "Por favor, crea el archivo y añade tu configuración de Firebase para continuar.",
+        "Puedes encontrar tu configuración en la consola de Firebase de tu proyecto.",
+        "El error original fue:", error);
 }
 
 // Funciones de autenticación (verifican si Firebase está inicializado)
