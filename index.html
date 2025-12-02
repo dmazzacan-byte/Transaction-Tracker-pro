@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n-key="appName">TransactionTracker Pro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="auth-container">
+        <div id="login-view">
+            <h2 data-i18n-key="login">Login</h2>
+            <form id="login-form">
+                <input type="email" id="login-email" data-i18n-key="email" data-i18n-target="placeholder" placeholder="Email" required>
+                <input type="password" id="login-password" data-i18n-key="password" data-i18n-target="placeholder" placeholder="Password" required>
+                <button type="submit" data-i18n-key="login">Login</button>
+            </form>
+            <p><span data-i18n-key="noAccount">Don't have an account?</span> <a href="#" id="show-register" data-i18n-key="registerHere">Register here</a></p>
+        </div>
+        <div id="register-view" class="hidden">
+            <h2 data-i18n-key="register">Register</h2>
+            <form id="register-form">
+                <input type="email" id="register-email" data-i18n-key="email" data-i18n-target="placeholder" placeholder="Email" required>
+                <input type="password" id="register-password" data-i18n-key="password" data-i18n-target="placeholder" placeholder="Password" required>
+                <button type="submit" data-i18n-key="register">Register</button>
+            </form>
+            <p><span data-i18n-key="hasAccount">Already have an account?</span> <a href="#" id="show-login" data-i18n-key="loginHere">Login here</a></p>
+        </div>
+    </div>
+
+    <div id="app-container" class="hidden">
+        <div class="menu-toggle">
+            <i class="fas fa-bars"></i>
+        </div>
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h3 data-i18n-key="appName">TransactionTracker</h3>
+            </div>
+            <ul>
+                <li><a href="#" class="nav-link active" data-tab="dashboard"><i class="fas fa-chart-line"></i><span data-i18n-key="dashboard">Dashboard</span></a></li>
+                <li><a href="#" class="nav-link" data-tab="orders"><i class="fas fa-box"></i><span data-i18n-key="orders">Orders</span></a></li>
+                <li><a href="#" class="nav-link" data-tab="customers"><i class="fas fa-users"></i><span data-i18n-key="customers">Customers</span></a></li>
+                <li><a href="#" class="nav-link" data-tab="payments"><i class="fas fa-credit-card"></i><span data-i18n-key="payments">Payments</span></a></li>
+                <li><a href="#" class="nav-link" data-tab="products"><i class="fas fa-tag"></i><span data-i18n-key="products">Products</span></a></li>
+                <li><a href="#" class="nav-link" data-tab="settings"><i class="fas fa-cog"></i><span data-i18n-key="settings">Settings</span></a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <button id="logout-btn"><i class="fas fa-sign-out-alt"></i><span data-i18n-key="logout">Logout</span></button>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <div id="dashboard" class="tab-content active">
+                <div class="header">
+                    <h1 data-i18n-key="dashboard">Dashboard</h1>
+                    <div class="filters">
+                        <select id="dashboard-month"></select>
+                        <select id="dashboard-year"></select>
+                    </div>
+                </div>
+                <div class="dashboard-grid">
+                     <div class="card">
+                        <h3 data-i18n-key="totalPendingPayments">Total Pending Payments</h3>
+                        <p id="total-pending-amount" class="summary-stat"></p>
+                    </div>
+                    <div class="card full-width">
+                        <h3 data-i18n-key="pendingPayments">Pending Payments</h3>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th data-i18n-key="customer">Customer</th>
+                                        <th data-i18n-key="pendingAmount">Pending Amount</th>
+                                        <th data-i18n-key="debtAge">Age</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pending-orders-list"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                     <div class="card">
+                        <h3 data-i18n-key="dailySales">Daily Sales</h3>
+                        <canvas id="sales-chart"></canvas>
+                    </div>
+                    <div class="card">
+                        <h3 data-i18n-key="salesByProduct">Sales by Product</h3>
+                        <canvas id="product-sales-chart"></canvas>
+                    </div>
+                    <div class="card">
+                        <h3 data-i18n-key="customerRanking">Customer Purchase Ranking</h3>
+                        <canvas id="customer-ranking-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div id="orders" class="tab-content">
+                 <div class="header">
+                    <h1 data-i18n-key="orders">Orders</h1>
+                     <div class="filters">
+                        <select id="orders-month"></select>
+                        <select id="orders-year"></select>
+                        <select id="order-customer-filter"></select>
+                        <select id="order-product-filter"></select>
+                        <select id="order-status-filter">
+                            <option value="" data-i18n-key="allStatuses">All Statuses</option>
+                            <option value="Paid" data-i18n-key="statusPaid">Paid</option>
+                            <option value="Partial" data-i18n-key="statusPartial">Partial</option>
+                            <option value="Pending" data-i18n-key="statusPending">Pending</option>
+                        </select>
+                    </div>
+                    <button id="add-order-btn" class="btn-primary"><i class="fas fa-plus"></i> <span data-i18n-key="newOrder">New Order</span></button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th data-i18n-key="date">Date</th>
+                                <th data-i18n-key="customer">Customer</th>
+                                <th data-i18n-key="product">Product</th>
+                                <th data-i18n-key="quantity">Quantity</th>
+                                <th data-i18n-key="total">Total</th>
+                                <th data-i18n-key="amountPaid">Amount Paid</th>
+                                <th data-i18n-key="status">Status</th>
+                                <th data-i18n-key="actions">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orders-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="customers" class="tab-content">
+                <div class="header">
+                    <h1 data-i18n-key="customers">Customers</h1>
+                    <button id="add-customer-btn" class="btn-primary"><i class="fas fa-plus"></i> <span data-i18n-key="newCustomer">New Customer</span></button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th data-i18n-key="name">Name</th>
+                                <th data-i18n-key="phone">Phone</th>
+                                <th data-i18n-key="monthlyVolume">Monthly Volume</th>
+                                <th data-i18n-key="historicalVolume">Historical Volume</th>
+                                <th data-i18n-key="pendingAmount">Pending Amount</th>
+                                <th data-i18n-key="actions">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customers-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="payments" class="tab-content">
+                 <div class="header">
+                    <h1 data-i18n-key="payments">Payments</h1>
+                     <div class="filters">
+                        <select id="payment-customer-filter"></select>
+                    </div>
+                    <button id="add-payment-btn" class="btn-primary"><i class="fas fa-plus"></i> <span data-i18n-key="newPayment">New Payment</span></button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th data-i18n-key="date">Date</th>
+                                <th data-i18n-key="customer">Customer</th>
+                                <th data-i18n-key="order">Order</th>
+                                <th data-i18n-key="amount">Amount</th>
+                                <th data-i18n-key="reference">Reference</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payments-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="products" class="tab-content">
+                <div class="header">
+                    <h1 data-i18n-key="products">Products</h1>
+                    <button id="add-product-btn" class="btn-primary"><i class="fas fa-plus"></i> <span data-i18n-key="newProduct">New Product</span></button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th data-i18n-key="description">Description</th>
+                                <th data-i18n-key="retailPrice">Retail Price</th>
+                                <th data-i18n-key="wholesalePrice">Wholesale Price</th>
+                                <th data-i18n-key="actions">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="settings" class="tab-content">
+                <div class="header">
+                    <h1 data-i18n-key="settings">Settings</h1>
+                </div>
+                <div class="settings-grid">
+                    <div class="card">
+                        <h3 data-i18n-key="userManagement">User Management</h3>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th data-i18n-key="name">Name</th>
+                                        <th data-i18n-key="email">Email</th>
+                                        <th data-i18n-key="actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 data-i18n-key="dataManagement">Data Management</h3>
+                        <button id="backup-data-btn" class="btn-secondary"><i class="fas fa-download"></i> <span data-i18n-key="backupData">Backup Data (Excel)</span></button>
+                        <input type="file" id="restore-data-input" accept=".xlsx" style="display: none;">
+                        <button id="restore-data-btn" class="btn-secondary"><i class="fas fa-upload"></i> <span data-i18n-key="restoreData">Restore Data</span></button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-backdrop" class="hidden"></div>
+
+    <div id="order-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="order-modal-title" data-i18n-key="orderModalTitle">New Order</h2>
+            <form id="order-form">
+                <input type="hidden" id="order-id">
+                <label for="order-customer" data-i18n-key="orderCustomerLabel">Customer:</label>
+                <div class="autocomplete">
+                    <input type="text" id="order-customer-autocomplete" data-i18n-target="placeholder" placeholder="Escriba para buscar...">
+                    <div id="autocomplete-results" class="autocomplete-items"></div>
+                </div>
+                <input type="hidden" id="order-customer-id">
+                <button type="button" id="show-customer-modal-btn" class="btn-secondary"><i class="fas fa-plus"></i> <span data-i18n-key="addCustomer">Add Customer</span></button>
+
+                <div id="order-items-container">
+                    <!-- Item rows will be injected here by JavaScript -->
+                </div>
+                <button type="button" id="add-order-item-btn" class="btn-secondary"><i class="fas fa-plus"></i> <span data-i18n-key="addItem">Añadir Ítem</span></button>
+
+                <div class="order-summary">
+                    <strong data-i18n-key="total">Total:</strong> <span id="order-total">0.00</span>
+                </div>
+
+                <label for="order-status" data-i18n-key="orderStatusLabel">Payment Status:</label>
+                <select id="order-status">
+                    <option value="Pending" data-i18n-key="statusPending">Pending</option>
+                    <option value="Partial" data-i18n-key="statusPartial">Partial</option>
+                    <option value="Paid" data-i18n-key="statusPaid">Paid</option>
+                </select>
+
+                <div id="payment-details-container" class="hidden">
+                    <label for="order-amount-paid" data-i18n-key="amountPaidLabel">Amount Paid:</label>
+                    <input type="number" id="order-amount-paid" step="0.01">
+                    <label for="order-reference" data-i18n-key="paymentReferenceLabel">Bank Reference:</label>
+                    <input type="text" id="order-reference">
+                </div>
+
+                <button type="submit" class="btn-primary" data-i18n-key="saveOrder">Save Order</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="customer-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="customer-modal-title" data-i18n-key="customerModalTitle">New Customer</h2>
+            <form id="customer-form">
+                <input type="hidden" id="customer-id">
+                <label for="customer-name" data-i18n-key="customerNameLabel">Name:</label>
+                <input type="text" id="customer-name" required>
+                <label for="customer-phone" data-i18n-key="customerPhoneLabel">Phone:</label>
+                <input type="tel" id="customer-phone">
+                <button type="submit" class="btn-primary" data-i18n-key="saveCustomer">Save Customer</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="payment-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="payment-modal-title" data-i18n-key="paymentModalTitle">New Payment</h2>
+            <form id="payment-form">
+                <input type="hidden" id="payment-id">
+                <input type="hidden" id="payment-order-id">
+                <label for="payment-order" data-i18n-key="paymentOrderLabel">Order:</label>
+                <select id="payment-order" required></select>
+                <label for="payment-amount" data-i18n-key="paymentAmountLabel">Amount:</label>
+                <input type="number" id="payment-amount" step="0.01" required>
+                 <label for="payment-reference" data-i18n-key="paymentReferenceLabel">Bank Reference:</label>
+                <input type="text" id="payment-reference">
+                <button type="submit" class="btn-primary" data-i18n-key="savePayment">Save Payment</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="product-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="product-modal-title" data-i18n-key="productModalTitle">New Product</h2>
+            <form id="product-form">
+                <input type="hidden" id="product-id">
+                <label for="product-description" data-i18n-key="productDescriptionLabel">Description:</label>
+                <input type="text" id="product-description" required>
+                <label for="product-retail-price" data-i18n-key="productRetailPriceLabel">Retail Price:</label>
+                <input type="number" id="product-retail-price" step="0.01" required>
+                <label for="product-wholesale-price" data-i18n-key="productWholesalePriceLabel">Wholesale Price:</label>
+                <input type="number" id="product-wholesale-price" step="0.01" required>
+                <button type="submit" class="btn-primary" data-i18n-key="saveProduct">Save Product</button>
+            </form>
+        </div>
+    </div>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script type="module" src="js/app.js?v=1.1"></script>
+</body>
+</html>
