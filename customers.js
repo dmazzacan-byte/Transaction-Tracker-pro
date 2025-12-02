@@ -85,11 +85,11 @@ const handleTableClick = async (e) => {
     }
 };
 
-export const initCustomers = () => {
+export const initCustomers = async () => {
     document.getElementById('add-customer-btn').addEventListener('click', () => openModal());
     customerModal.querySelector('.close-button').addEventListener('click', closeModal);
     customerForm.addEventListener('submit', handleFormSubmit);
     customersTableBody.addEventListener('click', handleTableClick);
 
-    renderCustomers();
+    await renderCustomers();
 };
