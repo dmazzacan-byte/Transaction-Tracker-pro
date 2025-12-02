@@ -4,16 +4,17 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth
 import { getFirestore } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
 // Your web app's Firebase configuration
-const firebaseConfigStr = "__FIREBASE_CONFIG__";
+const firebaseConfig = {
+    apiKey: "AIzaSyAYYYmJDKvXJTGfwQ1ZYfhzmZAjl3hoHe8",
+    authDomain: "gestionador-09021226-17c1c.firebaseapp.com",
+    projectId: "gestionador-09021226-17c1c",
+    storageBucket: "gestionador-09021226-17c1c.firebasestorage.app",
+    messagingSenderId: "22022249768",
+    appId: "1:22022249768:web:bf48a88ce0b22628bfc41d"
+};
 
 // Initialize Firebase
-let app;
-try {
-    const config = JSON.parse(firebaseConfigStr);
-    app = initializeApp(config);
-} catch (e) {
-    console.error("Firebase initialization failed. This is expected on a deployed site without a config file.", e);
-}
+const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 

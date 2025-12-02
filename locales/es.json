@@ -93,15 +93,5 @@
     "debtAge": "Antigüedad",
     "customerRanking": "Ranking de Compras por Cliente",
     "days": "días",
-    "addCustomer": "Añadir Cliente",
-    "selectProduct": "Seleccionar producto",
-    "priceRetail": "Minorista",
-    "priceWholesale": "Mayorista",
-    "discount": "Descuento",
-    "addItem": "Añadir Ítem",
-    "allCustomers": "Todos los Clientes",
-    "allProducts": "Todos los Productos",
-    "allStatuses": "Todos los Estados",
-    "amountPaidLabel": "Monto Pagado:",
-    "selectOrder": "Seleccionar Pedido"
+    "addCustomer": "Añadir Cliente"
 }
