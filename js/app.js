@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         addOrderItemBtn: document.getElementById('add-order-item-btn'),
         orderItemsContainer: document.getElementById('order-items-container'),
         orderTotalEl: document.getElementById('order-total'),
-    };
+     };
     let salesChart, productSalesChart, customerRankingChart;
 
     // --- Authentication ---

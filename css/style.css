@@ -51,7 +51,7 @@ body {
 #logout-btn i { margin-right: 1rem; }
 
 .main-content { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; }
-.header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: var(--surface-color); border-bottom: 1px solid var(--border-color); height: var(--header-height); flex-wrap: wrap; gap: 1rem; }
+u.header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: var(--surface-color); border-bottom: 1px solid var(--border-color); height: var(--header-height); flex-wrap: wrap; gap: 1rem; }
 .tab-content { display: none; flex-grow: 1; overflow-y: auto; padding: 2rem; }
 .tab-content.active { display: block; }
 
