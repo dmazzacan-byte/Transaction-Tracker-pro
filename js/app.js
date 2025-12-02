@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         addOrderItemBtn: document.getElementById('add-order-item-btn'),
         orderItemsContainer: document.getElementById('order-items-container'),
         orderTotalEl: document.getElementById('order-total'),
-     };
+      };
     let salesChart, productSalesChart, customerRankingChart;
 
     // --- Authentication ---
@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         DOMElements.addCustomerBtn.addEventListener('click', () => { DOMElements.customerForm.reset(); DOMElements.customerForm.querySelector('#customer-id').value = ''; document.getElementById('customer-modal-title').textContent = t('newCustomer'); openModal('customer-modal'); });
         DOMElements.addOrderBtn.addEventListener('click', () => { DOMElements.orderForm.reset(); DOMElements.orderItemsContainer.innerHTML = ''; addOrderItemRow(); document.getElementById('order-modal-title').textContent = t('newOrder'); openModal('order-modal'); });
         document.getElementById('show-customer-modal-btn').addEventListener('click', () => openModal('customer-modal', true));
-        DOMElements.addPaymentBtn.addEventListener('click', () => { DOMElements.paymentForm.reset(); populateSelect('payment-order', orders, 'id', 'id'); document.getElementById('payment-modal-title').textContent = t('newPayment'); openModal('payment-modal'); });
+         DOMElements.addPaymentBtn.addEventListener('click', () => { DOMElements.paymentForm.reset(); populateSelect('payment-order', orders, 'id', 'id'); document.getElementById('payment-modal-title').textContent = t('newPayment'); openModal('payment-modal'); });
         DOMElements.addOrderItemBtn.addEventListener('click', addOrderItemRow);
         DOMElements.orderItemsContainer.addEventListener('change', e => { if (e.target.classList.contains('order-item-product') || e.target.classList.contains('order-item-quantity')) { updateOrderTotal(); } });
 
