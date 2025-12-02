@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Tracker Pro</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div id="login-container" class="container">
+        <div class="login-box">
+            <h2>Login</h2>
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="btn">Login</button>
+                <p id="login-error" class="error-message"></p>
+            </form>
+        </div>
+    </div>
+
+    <div id="app" style="display: none;">
+        <nav class="sidebar">
+            <h1 class="logo">Transaction Tracker</h1>
+            <ul class="nav-links">
+                <li><a href="#" data-section="dashboard" class="active">Dashboard</a></li>
+                <li><a href="#" data-section="orders">Pedidos</a></li>
+                <li><a href="#" data-section="customers">Clientes</a></li>
+                <li><a href="#" data-section="payments">Pagos</a></li>
+                <li><a href="#" data-section="products">Productos</a></li>
+                <li><a href="#" data-section="settings">Configuración</a></li>
+            </ul>
+            <button id="logout-button">Logout</button>
+        </nav>
+        <main class="main-content">
+            <section id="dashboard" class="content-section">
+                <div class="section-header">
+                    <h2>Dashboard</h2>
+                    <div class="filters">
+                        <select id="month-filter">
+                            <!-- Month options will be populated here -->
+                        </select>
+                        <select id="year-filter">
+                            <!-- Year options will be populated here -->
+                        </select>
+                    </div>
+                </div>
+                <div class="dashboard-grid">
+                    <div class="chart-container">
+                        <h3>Ventas Diarias</h3>
+                        <canvas id="sales-chart"></canvas>
+                    </div>
+                    <div class="table-container">
+                        <h3>Pedidos con Pagos Pendientes</h3>
+                        <table id="pending-payments-table">
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Monto Pendiente</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Pending payment rows will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="table-container">
+                        <h3>Ventas por Producto</h3>
+                        <table id="product-sales-table">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Cantidad Vendida</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Product sales rows will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+            <section id="orders" class="content-section" style="display:none;">
+                <div class="section-header">
+                    <h2>Pedidos</h2>
+                    <button id="add-order-btn" class="btn">Add Order</button>
+                </div>
+                <div class="table-container">
+                    <table id="orders-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Cliente</th>
+                                <th>Producto</th>
+                                <th>Cantidad</th>
+                                <th>Valor Total</th>
+                                <th>Monto Abonado</th>
+                                <th>Estado de Pago</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Order rows will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Order Modal -->
+            <div id="order-modal" class="modal" style="display:none;">
+                <div class="modal-content">
+                    <span class="close-button">&times;</span>
+                    <h2 id="order-modal-title">Add Order</h2>
+                    <form id="order-form">
+                        <input type="hidden" id="order-id">
+                        <div class="input-group">
+                            <label for="order-date">Fecha</label>
+                            <input type="date" id="order-date" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="order-customer">Cliente</label>
+                            <select id="order-customer" required>
+                                <!-- Customer options will be populated here -->
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="order-product">Producto</label>
+                            <select id="order-product" required>
+                                <!-- Product options will be populated here -->
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="order-quantity">Cantidad</label>
+                            <input type="number" id="order-quantity" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="order-total">Valor Total</label>
+                            <input type="number" id="order-total" step="0.01" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="order-paid">Monto Abonado</label>
+                            <input type="number" id="order-paid" step="0.01" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="order-status">Estado de Pago</label>
+                            <select id="order-status" required>
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="Parcial">Parcial</option>
+                                <option value="Pagado">Pagado</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn">Save</button>
+                    </form>
+                </div>
+            </div>
+            <section id="customers" class="content-section" style="display:none;">
+                <div class="section-header">
+                    <h2>Clientes</h2>
+                    <button id="add-customer-btn" class="btn">Add Customer</button>
+                </div>
+                <div class="table-container">
+                    <table id="customers-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Teléfono</th>
+                                <th>Volumen de Compras (Mes)</th>
+                                <th>Volumen de Compras (Histórico)</th>
+                                <th>Monto Pendiente</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Customer rows will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Customer Modal -->
+            <div id="customer-modal" class="modal" style="display:none;">
+                <div class="modal-content">
+                    <span class="close-button">&times;</span>
+                    <h2 id="customer-modal-title">Add Customer</h2>
+                    <form id="customer-form">
+                        <input type="hidden" id="customer-id">
+                        <div class="input-group">
+                            <label for="customer-name">Nombre</label>
+                            <input type="text" id="customer-name" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="customer-phone">Teléfono</label>
+                            <input type="tel" id="customer-phone" required>
+                        </div>
+                        <button type="submit" class="btn">Save</button>
+                    </form>
+                </div>
+            </div>
+            <section id="payments" class="content-section" style="display:none;">
+                <div class="section-header">
+                    <h2>Pagos</h2>
+                    <button id="add-payment-btn" class="btn">Add Payment</button>
+                </div>
+                <div class="table-container">
+                    <table id="payments-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Cliente</th>
+                                <th>Pedido</th>
+                                <th>Monto</th>
+                                <th>Nro de Referencia</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Payment rows will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Payment Modal -->
+            <div id="payment-modal" class="modal" style="display:none;">
+                <div class="modal-content">
+                    <span class="close-button">&times;</span>
+                    <h2 id="payment-modal-title">Add Payment</h2>
+                    <form id="payment-form">
+                        <input type="hidden" id="payment-id">
+                        <div class="input-group">
+                            <label for="payment-date">Fecha</label>
+                            <input type="date" id="payment-date" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="payment-customer">Cliente</label>
+                            <select id="payment-customer" required>
+                                <!-- Customer options will be populated here -->
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="payment-order">Pedido</label>
+                            <select id="payment-order" required>
+                                <!-- Order options will be populated here -->
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="payment-amount">Monto</label>
+                            <input type="number" id="payment-amount" step="0.01" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="payment-reference">Nro de Referencia</label>
+                            <input type="text" id="payment-reference">
+                        </div>
+                        <button type="submit" class="btn">Save</button>
+                    </form>
+                </div>
+            </div>
+            <section id="products" class="content-section" style="display:none;">
+                <div class="section-header">
+                    <h2>Productos</h2>
+                    <button id="add-product-btn" class="btn">Add Product</button>
+                </div>
+                <div class="table-container">
+                    <table id="products-table">
+                        <thead>
+                            <tr>
+                                <th>Descripción</th>
+                                <th>Precio Detal</th>
+                                <th>Precio Mayor</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Product rows will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Product Modal -->
+            <div id="product-modal" class="modal" style="display:none;">
+                <div class="modal-content">
+                    <span class="close-button">&times;</span>
+                    <h2 id="modal-title">Add Product</h2>
+                    <form id="product-form">
+                        <input type="hidden" id="product-id">
+                        <div class="input-group">
+                            <label for="product-description">Descripción</label>
+                            <input type="text" id="product-description" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="product-price-retail">Precio Detal</label>
+                            <input type="number" id="product-price-retail" step="0.01" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="product-price-wholesale">Precio Mayor</label>
+                            <input type="number" id="product-price-wholesale" step="0.01" required>
+                        </div>
+                        <button type="submit" class="btn">Save</button>
+                    </form>
+                </div>
+            </div>
+            <section id="settings" class="content-section" style="display:none;">
+                <h2>Configuración</h2>
+                <div class="settings-actions">
+                    <div class="action-card">
+                        <h3>Backup</h3>
+                        <p>Download all your data as an Excel file.</p>
+                        <button id="backup-btn" class="btn">Backup Data</button>
+                    </div>
+                    <div class="action-card">
+                        <h3>Restore</h3>
+                        <p>Restore your data from an Excel file.</p>
+                        <input type="file" id="restore-input" accept=".xlsx, .xls" style="display: none;">
+                        <button id="restore-btn" class="btn">Restore Data</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script type="module" src="app.js"></script>
+</body>
+</html>
