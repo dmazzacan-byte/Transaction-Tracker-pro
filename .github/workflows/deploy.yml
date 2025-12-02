@@ -6,9 +6,11 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write # Esto es clave si el paso de despliegue hace push
+      pull-requests: write # Añadir si el despliegue actualiza PRs, etc.
   pages: write
   id-token: write
+ 
 
 jobs:
   build-and-deploy:
