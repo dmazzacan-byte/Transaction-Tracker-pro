@@ -26,24 +26,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Replace Firebase config placeholders
+      - name: Create Firebase config file
         run: |
-          sed -i.bak "s#__API_KEY__#$API_KEY#g" firebase.js
-          sed -i.bak "s#__AUTH_DOMAIN__#$AUTH_DOMAIN#g" firebase.js
-          sed -i.bak "s#__PROJECT_ID__#$PROJECT_ID#g" firebase.js
-          sed -i.bak "s#__STORAGE_BUCKET__#$STORAGE_BUCKET#g" firebase.js
-          sed -i.bak "s#__MESSAGING_SENDER_ID__#$MESSAGING_SENDER_ID#g" firebase.js
-          sed -i.bak "s#__APP_ID__#$APP_ID#g" firebase.js
+          mkdir -p firebase
+          printf 'export const firebaseConfig = {"apiKey":"%s","authDomain":"%s","projectId":"%s","storageBucket":"%s","messagingSenderId":"%s","appId":"%s"};' \
+            "$API_KEY" \
+            "$AUTH_DOMAIN" \
+            "$PROJECT_ID" \
+            "$STORAGE_BUCKET" \
+            "$MESSAGING_SENDER_ID" \
+            "$APP_ID" > firebase/config.js
 
       - name: Verify file content
         run: |
-          echo "--- Verifying firebase.js content ---"
-          cat firebase.js
+          echo "--- Verifying firebase/config.js content ---"
+          cat firebase/config.js
 
       - name: Prepare deployment artifacts
         run: |
           mkdir dist
           cp index.html style.css *.js dist/
+          cp -r css js locales firebase dist/
           echo "--- Contents of dist directory ---"
           ls -lR dist
 
