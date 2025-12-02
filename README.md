@@ -1,2 +1,2 @@
 # Transaction-Tracker-pro
-/// Sistema de Gestion de negocio ////xx
+Sistema de Gestion de negocio
