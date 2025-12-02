@@ -115,9 +115,9 @@ const renderProductSales = (orders, products) => {
     }
 };
 
-export const initDashboard = () => {
+export const initDashboard = async () => {
     populateFilters();
-    renderDashboard();
+    await renderDashboard();
     monthFilter.addEventListener('change', renderDashboard);
     yearFilter.addEventListener('change', renderDashboard);
 };
