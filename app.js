@@ -20,15 +20,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 // When user is authenticated, hide login and show the main app
                 loginContainer.style.display = 'none';
                 appContainer.style.display = 'flex';
-                // Initialize all application modules and wait for them to complete
-                await Promise.all([
-                    initProducts(),
-                    initCustomers(),
-                    initOrders(),
-                    initPayments(),
-                    initDashboard(),
-                    initSettings()
-                ]);
+                // Initialize all application modules
+                initProducts();
+                initCustomers();
+                initOrders();
+                initPayments();
+                initDashboard();
+                initSettings();
             } catch (error) {
                 // If any initialization fails, log the user out and show an error
                 console.error("Failed to initialize application after login:", error);
