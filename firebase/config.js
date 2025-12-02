@@ -1,0 +1,1 @@
+export const firebaseConfig = {"apiKey":"AIzaSyAYYYmJDKvXJTGfwQ1ZYfhzmZAjl3hoHe8","authDomain":"transaction-tracker-pro.firebaseapp.com","projectId":"transaction-tracker-pro","storageBucket":"transaction-tracker-pro.firebasestorage.app","messagingSenderId":"709182125036","appId":"1:709182125036:web:6aa88d85676c0c1e6286c9"};

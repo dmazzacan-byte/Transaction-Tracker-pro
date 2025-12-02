@@ -18,7 +18,6 @@ import {
 let app, auth, db;
 let firebaseInitialized = false;
 
-// Intenta cargar la configuración de forma dinámica
 try {
     // Importa la configuración de Firebase desde un archivo local
     const { firebaseConfig } = await import('./firebase/config.js');
