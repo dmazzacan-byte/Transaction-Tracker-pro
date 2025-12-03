@@ -63,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loginContainer.style.display = 'flex';
             appContainer.style.display = 'none';
         }
+        // The UI initialization for a new login is now handled directly by the login button's click event.
     });
 
     // Login event
