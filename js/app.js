@@ -72,28 +72,63 @@ document.addEventListener('DOMContentLoaded', async () => {
     onAuthStateChanged(auth, user => {
         if (user) {
             currentUser = user;
-            DOMElements.authContainer.classList.add('hidden');
-            DOMElements.appContainer.classList.remove('hidden');
+            DOMElements.authContainer.style.display = 'none';
+            DOMElements.appContainer.style.display = 'block';
+            DOMElements.loader.style.display = 'flex';
             initApp();
         } else {
             currentUser = null;
-            DOMElements.authContainer.classList.remove('hidden');
-            DOMElements.appContainer.classList.add('hidden');
+            DOMElements.authContainer.style.display = 'block';
+            DOMElements.appContainer.style.display = 'none';
+            DOMElements.loader.style.display = 'none';
         }
     });
 
-    DOMElements.loginForm.addEventListener('submit', e => { e.preventDefault(); signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value).catch(err => alert(err.message)); });
+    DOMElements.loginForm.addEventListener('submit', e => {
+        e.preventDefault();
+        DOMElements.loader.style.display = 'flex';
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        signInWithEmailAndPassword(auth, email, password)
+            .catch(err => {
+                DOMElements.loader.style.display = 'none';
+                alert(err.message);
+            });
+    });
     DOMElements.registerForm.addEventListener('submit', e => { e.preventDefault(); createUserWithEmailAndPassword(auth, document.getElementById('register-email').value, document.getElementById('register-password').value).then(cred => addDoc(collection(db, `users/${cred.user.uid}/users`), { uid: cred.user.uid, email: cred.user.email, name: cred.user.email.split('@')[0] })).catch(err => alert(err.message)); });
     DOMElements.logoutBtn.addEventListener('click', () => signOut(auth));
     document.getElementById('show-register').addEventListener('click', () => { document.getElementById('login-view').classList.add('hidden'); document.getElementById('register-view').classList.remove('hidden'); });
     document.getElementById('show-login').addEventListener('click', () => { document.getElementById('login-view').classList.remove('hidden'); document.getElementById('register-view').classList.add('hidden'); });
 
     // --- App Initialization & Data ---
-    async function initApp() { if (!currentUser) return; await fetchData(); setupFilters(); renderAll(); setupEventListeners(); setupDashboard(); }
+    async function initApp() {
+        if (!currentUser) return;
+        try {
+            await fetchData();
+            setupFilters();
+            renderAll();
+            setupEventListeners();
+            setupDashboard();
+            DOMElements.loader.style.display = 'none';
+        } catch (error) {
+            console.error("Error initializing app:", error);
+            DOMElements.loader.style.display = 'none';
+        }
+    }
+
     async function fetchData() {
         const userId = currentUser.uid;
-        const [pSnap, cSnap, oSnap, paySnap, uSnap] = await Promise.all([ getDocs(collection(db, `users/${userId}/products`)), getDocs(collection(db, `users/${userId}/customers`)), getDocs(collection(db, `users/${userId}/orders`)), getDocs(collection(db, `users/${userId}/payments`)), getDocs(collection(db, `users/${userId}/users`)) ]);
-        products = pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })); customers = cSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })); orders = oSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })); payments = paySnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const [pSnap, cSnap, oSnap, paySnap, uSnap] = await Promise.all([
+            getDocs(collection(db, `users/${userId}/products`)),
+            getDocs(collection(db, `users/${userId}/customers`)),
+            getDocs(collection(db, `users/${userId}/orders`)),
+            getDocs(collection(db, `users/${userId}/payments`)),
+            getDocs(collection(db, `users/${userId}/users`))
+        ]);
+        products = pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        customers = cSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        orders = oSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        payments = paySnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         const userDocs = uSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         users = userDocs.some(u => u.uid === currentUser.uid) ? userDocs : [...userDocs, { uid: currentUser.uid, email: currentUser.email, name: currentUser.email.split('@')[0] }];
     }
