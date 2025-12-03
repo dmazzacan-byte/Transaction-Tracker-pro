@@ -45,24 +45,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 // When user is authenticated, hide login and show the main app
                 loginContainer.style.display = 'none';
                 appContainer.style.display = 'flex';
-                // Initialize all application modules and wait for them to complete, with a 10-second timeout.
-                const initializationPromise = Promise.all([
-                    initProducts(),
-                    initCustomers(),
-                    initOrders(),
-                    initPayments(),
-                    initDashboard(),
-                    initSettings()
-                ]);
-
-                await promiseWithTimeout(initializationPromise, 10000, 'La carga de datos inicial ha superado el tiempo límite.');
+                // Initialize all application modules
+                initProducts();
+                initCustomers();
+                initOrders();
+                initPayments();
+                initDashboard();
+                initSettings();
             } catch (error) {
                 // If any initialization fails, log the user out and show an error
                 console.error("Failed to initialize application after login:", error);
-                // Display the specific timeout message, or a generic one for other errors.
-                loginError.textContent = error.message.includes('límite')
-                    ? error.message
-                    : "Error al cargar los datos de la aplicación. Inténtalo de nuevo.";
+                loginError.textContent = "Error al cargar los datos de la aplicación. Inténtalo de nuevo.";
                 await logout(); // Ensure user is logged out to prevent inconsistent state
             }
         } else {
