@@ -21,6 +21,7 @@ import {
 document.addEventListener('DOMContentLoaded', () => {
     // --- State ---
     let currentUser = null;
+    let listenersAttached = false;
     let products = [];
     let customers = [];
     let orders = [];
@@ -56,6 +57,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const paymentsTableBody = document.getElementById('payments-table-body');
     const usersTableBody = document.getElementById('users-table-body');
 
+    // Search & Filters
+    const ordersSearch = document.getElementById('orders-search');
+    const customersSearch = document.getElementById('customers-search');
+    const productsSearch = document.getElementById('products-search');
+    const ordersCustomerFilter = document.getElementById('orders-customer-filter');
+    const ordersMonthFilter = document.getElementById('orders-month-filter');
+    const ordersYearFilter = document.getElementById('orders-year-filter');
+
     // Forms
     const productForm = document.getElementById('product-form');
     const customerForm = document.getElementById('customer-form');
@@ -71,19 +80,68 @@ document.addEventListener('DOMContentLoaded', () => {
     const dashboardMonthSelect = document.getElementById('dashboard-month');
     const dashboardYearSelect = document.getElementById('dashboard-year');
     const pendingOrdersList = document.getElementById('pending-orders-list');
-    let salesChart, productSalesChart;
+    let salesChart, productSalesChart, customerRankingChart;
+
+    // --- I18n ---
+    async function setLanguage(lang = 'es') { // Default to Spanish
+        try {
+            const response = await fetch(`locales/${lang}.json`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            translations = await response.json();
+            translateUI();
+        } catch (error) {
+            console.error("Could not load language file:", error);
+            // Fallback to English if Spanish fails
+            if (lang !== 'en') {
+                await setLanguage('en');
+            }
+        }
+    }
+
+    function t(key, options = {}) {
+        let translation = translations[key] || key;
+        // Replace placeholders like {{variable}}
+        Object.keys(options).forEach(placeholder => {
+            const regex = new RegExp(`{{${placeholder}}}`, 'g');
+            translation = translation.replace(regex, options[placeholder]);
+        });
+        return translation;
+    }
+
+    function translateUI() {
+        document.querySelectorAll('[data-i18n-key]').forEach(el => {
+            const key = el.dataset.i18nKey;
+            const translation = t(key);
+            // Use .childNodes to avoid breaking event listeners on child elements
+            const textNode = Array.from(el.childNodes).find(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+            if (textNode) {
+                textNode.textContent = translation;
+            } else if (el.firstChild && el.firstChild.nodeType !== Node.ELEMENT_NODE) {
+                el.textContent = translation;
+            } else if (!el.children.length) { // Only set textContent if no children exist
+                el.textContent = translation;
+            }
+        });
+         document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            const key = el.dataset.i18nPlaceholder;
+            el.placeholder = t(key);
+        });
+    }
 
     // --- Authentication ---
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
         if (user) {
             currentUser = user;
             authContainer.classList.add('hidden');
             appContainer.classList.remove('hidden');
-            initApp();
+            await initApp();
         } else {
             currentUser = null;
             authContainer.classList.remove('hidden');
             appContainer.classList.add('hidden');
+            await setLanguage(navigator.language.split('-')[0] || 'es');
         }
     });
 
@@ -121,12 +179,53 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('register-view').classList.add('hidden');
     });
 
+    function setupOrderFilters() {
+        populateSelect('orders-customer-filter', [{id: '', name: t('all_customers')}, ...customers], 'id', 'name');
+
+        const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        ordersMonthFilter.innerHTML = `<option value="">${t('all_months')}</option>` + months.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+        ordersMonthFilter.value = new Date().getMonth();
+
+        const currentYear = new Date().getFullYear();
+        let yearOptions = `<option value="">${t('all_years')}</option>`;
+        for (let i = currentYear; i >= currentYear - 5; i--) {
+            yearOptions += `<option value="${i}">${i}</option>`;
+        }
+        ordersYearFilter.innerHTML = yearOptions;
+        ordersYearFilter.value = currentYear;
+
+        const applyFilters = () => {
+            renderOrders(
+                ordersSearch.value,
+                ordersCustomerFilter.value,
+                ordersMonthFilter.value,
+                ordersYearFilter.value
+            );
+        };
+        if (!listenersAttached) {
+            ordersCustomerFilter.addEventListener('change', applyFilters);
+            ordersMonthFilter.addEventListener('change', applyFilters);
+            ordersYearFilter.addEventListener('change', applyFilters);
+            ordersSearch.addEventListener('input', applyFilters);
+        }
+        applyFilters(); // Initial render
+    }
+
     // --- App Initialization ---
     async function initApp() {
         if (!currentUser) return;
         await fetchData();
         renderAll();
         setupDashboard();
+        setupOrderFilters();
+        if (!listenersAttached) {
+            customersSearch.addEventListener('input', () => renderCustomers(customersSearch.value));
+            productsSearch.addEventListener('input', () => renderProducts(productsSearch.value));
+            listenersAttached = true;
+        }
+
+        translateUI();
+        document.body.dataset.ready = 'true';
     }
 
     // --- Data Fetching ---
@@ -553,8 +652,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupDashboard() {
         populateDateFilters();
         updateDashboard();
-        dashboardMonthSelect.addEventListener('change', updateDashboard);
-        dashboardYearSelect.addEventListener('change', updateDashboard);
+        if (!listenersAttached) {
+            dashboardMonthSelect.addEventListener('change', updateDashboard);
+            dashboardYearSelect.addEventListener('change', updateDashboard);
+        }
     }
 
     function populateDateFilters() {
@@ -582,6 +683,37 @@ document.addEventListener('DOMContentLoaded', () => {
         renderSalesChart(filteredOrders, month, year);
         renderProductSalesChart(filteredOrders);
         renderPendingOrders(orders); // Show all pending, not just this month's
+        renderCustomerRankingChart(filteredOrders);
+    }
+
+    function renderCustomerRankingChart(filteredOrders) {
+        const customerSales = {};
+        filteredOrders.forEach(o => {
+            const customerName = customers.find(c => c.id === o.customerId)?.name || 'Unknown';
+            customerSales[customerName] = (customerSales[customerName] || 0) + o.total;
+        });
+
+        const sortedCustomers = Object.entries(customerSales).sort(([,a],[,b]) => b-a);
+        const labels = sortedCustomers.map(([name]) => name);
+        const data = sortedCustomers.map(([,total]) => total);
+
+        const ctx = document.getElementById('customer-ranking-chart').getContext('2d');
+        if (customerRankingChart) customerRankingChart.destroy();
+        customerRankingChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: t('sales'),
+                    data: data,
+                    backgroundColor: '#28a745',
+                }]
+            },
+            options: {
+                responsive: true,
+                indexAxis: 'y', // Horizontal bars
+            }
+        });
     }
 
     function renderSalesChart(filteredOrders, month, year) {
@@ -594,32 +726,79 @@ document.addEventListener('DOMContentLoaded', () => {
             salesData[day - 1] += o.total;
         });
 
+        const cumulativeSalesData = salesData.reduce((acc, val, i) => {
+            acc[i] = (acc[i-1] || 0) + val;
+            return acc;
+        }, []);
+
         const ctx = document.getElementById('sales-chart').getContext('2d');
         if (salesChart) salesChart.destroy();
         salesChart = new Chart(ctx, {
-            type: 'line',
+            type: 'bar', // Using a mixed chart type
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Daily Sales',
+                    label: t('daily_sales'),
                     data: salesData,
-                    borderColor: 'rgba(0, 123, 255, 1)',
-                    backgroundColor: 'rgba(0, 123, 255, 0.2)',
-                    fill: true,
+                    backgroundColor: 'rgba(0, 123, 255, 0.6)',
+                    yAxisID: 'y',
+                }, {
+                    label: t('cumulative_sales'),
+                    data: cumulativeSalesData,
+                    type: 'line',
+                    borderColor: 'rgba(40, 167, 69, 1)',
+                    backgroundColor: 'rgba(40, 167, 69, 0.2)',
+                    tension: 0.1,
+                    yAxisID: 'y1',
                 }]
             },
-            options: { responsive: true }
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                         title: {
+                            display: true,
+                            text: t('daily_sales')
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: t('cumulative_sales')
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                    },
+                }
+            }
         });
     }
 
     function renderProductSalesChart(filteredOrders) {
-         const productSales = {};
-         filteredOrders.forEach(o => {
-             const productName = products.find(p => p.id === o.productId)?.description || 'Unknown';
-             productSales[productName] = (productSales[productName] || 0) + o.total;
-         });
+        const productSales = {};
+        filteredOrders.forEach(o => {
+            if (Array.isArray(o.items)) {
+                o.items.forEach(item => {
+                    const product = products.find(p => p.id === item.productId);
+                    const productName = product ? product.description : 'Unknown';
+                    const itemTotal = item.price * item.quantity;
+                    productSales[productName] = (productSales[productName] || 0) + itemTotal;
+                });
+            }
+        });
 
-         const labels = Object.keys(productSales);
+        const labels = Object.keys(productSales);
          const data = Object.values(productSales);
 
          const ctx = document.getElementById('product-sales-chart').getContext('2d');
