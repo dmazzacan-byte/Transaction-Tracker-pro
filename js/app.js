@@ -21,6 +21,7 @@ import {
 document.addEventListener('DOMContentLoaded', () => {
     // --- State ---
     let currentUser = null;
+    let listenersAttached = false;
     let products = [];
     let customers = [];
     let orders = [];
@@ -30,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
     const authContainer = document.getElementById('auth-container');
     const appContainer = document.getElementById('app-container');
+    const menuToggle = document.getElementById('menu-toggle');
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
     const showRegister = document.getElementById('show-register');
@@ -56,6 +58,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const paymentsTableBody = document.getElementById('payments-table-body');
     const usersTableBody = document.getElementById('users-table-body');
 
+    // Search & Filters
+    const ordersSearch = document.getElementById('orders-search');
+    const customersSearch = document.getElementById('customers-search');
+    const productsSearch = document.getElementById('products-search');
+    const ordersCustomerFilter = document.getElementById('orders-customer-filter');
+    const ordersMonthFilter = document.getElementById('orders-month-filter');
+    const ordersYearFilter = document.getElementById('orders-year-filter');
+
     // Forms
     const productForm = document.getElementById('product-form');
     const customerForm = document.getElementById('customer-form');
@@ -71,19 +81,68 @@ document.addEventListener('DOMContentLoaded', () => {
     const dashboardMonthSelect = document.getElementById('dashboard-month');
     const dashboardYearSelect = document.getElementById('dashboard-year');
     const pendingOrdersList = document.getElementById('pending-orders-list');
-    let salesChart, productSalesChart;
+    let salesChart, productSalesChart, customerRankingChart;
+
+    // --- I18n ---
+    async function setLanguage(lang = 'es') { // Default to Spanish
+        try {
+            const response = await fetch(`locales/${lang}.json`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            translations = await response.json();
+            translateUI();
+        } catch (error) {
+            console.error("Could not load language file:", error);
+            // Fallback to English if Spanish fails
+            if (lang !== 'en') {
+                await setLanguage('en');
+            }
+        }
+    }
+
+    function t(key, options = {}) {
+        let translation = translations[key] || key;
+        // Replace placeholders like {{variable}}
+        Object.keys(options).forEach(placeholder => {
+            const regex = new RegExp(`{{${placeholder}}}`, 'g');
+            translation = translation.replace(regex, options[placeholder]);
+        });
+        return translation;
+    }
+
+    function translateUI() {
+        document.querySelectorAll('[data-i18n-key]').forEach(el => {
+            const key = el.dataset.i18nKey;
+            const translation = t(key);
+            // Use .childNodes to avoid breaking event listeners on child elements
+            const textNode = Array.from(el.childNodes).find(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+            if (textNode) {
+                textNode.textContent = translation;
+            } else if (el.firstChild && el.firstChild.nodeType !== Node.ELEMENT_NODE) {
+                el.textContent = translation;
+            } else if (!el.children.length) { // Only set textContent if no children exist
+                el.textContent = translation;
+            }
+        });
+         document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            const key = el.dataset.i18nPlaceholder;
+            el.placeholder = t(key);
+        });
+    }
 
     // --- Authentication ---
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
         if (user) {
             currentUser = user;
             authContainer.classList.add('hidden');
             appContainer.classList.remove('hidden');
-            initApp();
+            await initApp();
         } else {
             currentUser = null;
             authContainer.classList.remove('hidden');
             appContainer.classList.add('hidden');
+            await setLanguage(navigator.language.split('-')[0] || 'es');
         }
     });
 
@@ -121,38 +180,111 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('register-view').classList.add('hidden');
     });
 
+    const sidebar = document.querySelector('.sidebar');
+    menuToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('show');
+    });
+
+    // Hide sidebar after clicking a nav link on mobile
+    navLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth <= 768) {
+                sidebar.classList.remove('show');
+            }
+        });
+    });
+
+    function setupOrderFilters() {
+        populateSelect('orders-customer-filter', [{id: '', name: t('all_customers')}, ...customers], 'id', 'name');
+
+        const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        ordersMonthFilter.innerHTML = `<option value="">${t('all_months')}</option>` + months.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+        ordersMonthFilter.value = new Date().getMonth();
+
+        const currentYear = new Date().getFullYear();
+        let yearOptions = `<option value="">${t('all_years')}</option>`;
+        for (let i = currentYear; i >= currentYear - 5; i--) {
+            yearOptions += `<option value="${i}">${i}</option>`;
+        }
+        ordersYearFilter.innerHTML = yearOptions;
+        ordersYearFilter.value = currentYear;
+
+        const applyFilters = () => {
+            renderOrders(
+                ordersSearch.value,
+                ordersCustomerFilter.value,
+                ordersMonthFilter.value,
+                ordersYearFilter.value
+            );
+        };
+        if (!listenersAttached) {
+            ordersCustomerFilter.addEventListener('change', applyFilters);
+            ordersMonthFilter.addEventListener('change', applyFilters);
+            ordersYearFilter.addEventListener('change', applyFilters);
+            ordersSearch.addEventListener('input', applyFilters);
+        }
+        applyFilters(); // Initial render
+    }
+
     // --- App Initialization ---
     async function initApp() {
         if (!currentUser) return;
+        await setLanguage('es'); // Default to Spanish
         await fetchData();
         renderAll();
         setupDashboard();
+        setupOrderFilters();
+        if (!listenersAttached) {
+            customersSearch.addEventListener('input', () => renderCustomers(customersSearch.value));
+            productsSearch.addEventListener('input', () => renderProducts(productsSearch.value));
+            listenersAttached = true;
+        }
+
+        translateUI();
+        document.body.dataset.ready = 'true';
     }
 
     // --- Data Fetching ---
     async function fetchData() {
-        const userId = currentUser.uid;
-        const collections = {
-            products: collection(db, `users/${userId}/products`),
-            customers: collection(db, `users/${userId}/customers`),
-            orders: collection(db, `users/${userId}/orders`),
-            payments: collection(db, `users/${userId}/payments`),
-            users: collection(db, `users/${userId}/users`)
-        };
+        try {
+            const userId = currentUser.uid;
+            const collections = {
+                products: collection(db, `users/${userId}/products`),
+                customers: collection(db, `users/${userId}/customers`),
+                orders: collection(db, `users/${userId}/orders`),
+                payments: collection(db, `users/${userId}/payments`),
+                users: collection(db, `users/${userId}/users`)
+            };
 
-        const [productsSnap, customersSnap, ordersSnap, paymentsSnap, usersSnap] = await Promise.all([
-            getDocs(collections.products),
-            getDocs(collections.customers),
-            getDocs(collections.orders),
-            getDocs(collections.payments),
-            getDocs(collections.users)
-        ]);
+            const [productsSnap, customersSnap, ordersSnap, paymentsSnap, usersSnap] = await Promise.all([
+                getDocs(collections.products),
+                getDocs(collections.customers),
+                getDocs(collections.orders),
+                getDocs(collections.payments),
+                getDocs(collections.users)
+            ]);
 
-        products = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        customers = customersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        orders = ordersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        payments = paymentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            products = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            customers = customersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            orders = ordersSnap.docs.map(doc => {
+                const order = { id: doc.id, ...doc.data() };
+                // Backwards compatibility for old data structure
+                if (order.productId && !order.items) {
+                    order.items = [{
+                        productId: order.productId,
+                        quantity: order.quantity,
+                        price: order.total / order.quantity,
+                        priceType: 'retail' // Assume retail for old orders
+                    }];
+                }
+                return order;
+            });
+            payments = paymentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (error) {
+            console.error("Error fetching data:", error);
+            alert(`Error fetching data: ${error.message}`);
+        }
     }
 
     // --- Rendering ---
@@ -164,14 +296,18 @@ document.addEventListener('DOMContentLoaded', () => {
         renderUsers();
     }
 
-    function renderProducts() {
+    function renderProducts(searchTerm = '') {
         productsTableBody.innerHTML = '';
-        products.forEach(p => {
+        const filteredProducts = products.filter(p => p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()));
+        filteredProducts.sort((a, b) => (a.description || '').localeCompare(b.description || ''));
+        filteredProducts.forEach(p => {
+            const retailPrice = typeof p.retailPrice === 'number' ? p.retailPrice.toFixed(2) : '0.00';
+            const wholesalePrice = typeof p.wholesalePrice === 'number' ? p.wholesalePrice.toFixed(2) : '0.00';
             const row = `
                 <tr>
-                    <td>${p.description}</td>
-                    <td>$${p.retailPrice?.toFixed(2)}</td>
-                    <td>$${p.wholesalePrice?.toFixed(2)}</td>
+                    <td>${p.description || 'N/A'}</td>
+                    <td>$${retailPrice}</td>
+                    <td>$${wholesalePrice}</td>
                     <td>
                         <button class="action-btn edit" data-id="${p.id}" data-type="product" title="Edit"><i class="fas fa-edit"></i></button>
                         <button class="action-btn delete" data-id="${p.id}" data-type="product" title="Delete"><i class="fas fa-trash"></i></button>
@@ -182,23 +318,42 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-     function renderCustomers() {
+     function renderCustomers(searchTerm = '') {
         customersTableBody.innerHTML = '';
-        customers.forEach(c => {
-            // Basic calculations - can be expanded
-            const pendingAmount = orders.filter(o => o.customerId === c.id && o.status !== 'Paid')
-                                       .reduce((sum, o) => sum + (o.total - (o.amountPaid || 0)), 0);
+        const filteredCustomers = customers.filter(c => c.name && c.name.toLowerCase().includes(searchTerm.toLowerCase()));
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+
+        // Sort alphabetically by name
+        filteredCustomers.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+        filteredCustomers.forEach(c => {
+            const customerOrders = orders.filter(o => o && o.customerId === c.id);
+
+            const historicalVolume = customerOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+
+            const monthlyVolume = customerOrders
+                .filter(o => {
+                    if (!o.date) return false;
+                    const orderDate = new Date(o.date);
+                    return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
+                })
+                .reduce((sum, o) => sum + (o.total || 0), 0);
+
+            const pendingAmount = customerOrders
+                .filter(o => o.status !== 'Paid')
+                .reduce((sum, o) => sum + ((o.total || 0) - (o.amountPaid || 0)), 0);
 
             const row = `
                 <tr>
-                    <td>${c.name}</td>
+                    <td>${c.name || 'N/A'}</td>
                     <td>${c.phone || ''}</td>
-                    <td>N/A</td> <!-- Monthly Volume requires more complex calculation -->
-                    <td>N/A</td> <!-- Historical Volume requires more complex calculation -->
-                    <td>$${pendingAmount.toFixed(2)}</td>
+                    <td>$${(monthlyVolume || 0).toFixed(2)}</td>
+                    <td>$${(historicalVolume || 0).toFixed(2)}</td>
+                    <td>$${(pendingAmount || 0).toFixed(2)}</td>
                     <td>
-                        <button class="action-btn edit" data-id="${c.id}" data-type="customer" title="Edit"><i class="fas fa-edit"></i></button>
-                        <button class="action-btn delete" data-id="${c.id}" data-type="customer" title="Delete"><i class="fas fa-trash"></i></button>
+                        <button class="action-btn edit" data-id="${c.id}" data-type="customer" title="${t('edit')}"><i class="fas fa-edit"></i></button>
+                        <button class="action-btn delete" data-id="${c.id}" data-type="customer" title="${t('delete')}"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
             `;
@@ -206,26 +361,61 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function renderOrders() {
+    function renderOrders(searchTerm = '', customerId, month, year) {
         ordersTableBody.innerHTML = '';
-        orders.sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort by most recent
-        orders.forEach(o => {
+
+        let filteredOrders = orders.filter(o => o && o.date); // Filter out orders without a date
+
+        if (customerId) {
+            filteredOrders = filteredOrders.filter(o => o.customerId === customerId);
+        }
+        if (month) {
+            filteredOrders = filteredOrders.filter(o => new Date(o.date).getMonth() == month);
+        }
+        if (year) {
+            filteredOrders = filteredOrders.filter(o => new Date(o.date).getFullYear() == year);
+        }
+        if (searchTerm) {
+            const lowerCaseSearchTerm = searchTerm.toLowerCase();
+            filteredOrders = filteredOrders.filter(o => {
+                const customerName = (customers.find(c => c.id === o.customerId)?.name || '').toLowerCase();
+                const items = Array.isArray(o.items) ? o.items : [];
+                const itemSummary = items.map(item => {
+                    const product = products.find(p => p.id === item.productId);
+                    return product ? (product.description || '').toLowerCase() : '';
+                }).join(' ');
+                return customerName.includes(lowerCaseSearchTerm) || itemSummary.includes(lowerCaseSearchTerm);
+            });
+        }
+
+        filteredOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        filteredOrders.forEach(o => {
             const customer = customers.find(c => c.id === o.customerId)?.name || 'N/A';
-            const product = products.find(p => p.id === o.productId)?.description || 'N/A';
-            const statusClass = `status-${o.status.toLowerCase()}`;
+            const items = Array.isArray(o.items) ? o.items : [];
+            const itemsSummary = items.map(item => {
+                const product = products.find(p => p.id === item.productId);
+                return `${item.quantity || 0} x ${product ? product.description : 'N/A'}`;
+            }).join('<br>');
+            const status = o.status || 'N/A';
+            const statusClass = `status-${status.toLowerCase()}`;
+            const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+            const total = typeof o.total === 'number' ? o.total.toFixed(2) : '0.00';
+            const amountPaid = typeof o.amountPaid === 'number' ? o.amountPaid.toFixed(2) : '0.00';
+
             const row = `
                 <tr>
                     <td>${new Date(o.date).toLocaleDateString()}</td>
                     <td>${customer}</td>
-                    <td>${product}</td>
-                    <td>${o.quantity}</td>
-                    <td>$${o.total.toFixed(2)}</td>
-                    <td>$${(o.amountPaid || 0).toFixed(2)}</td>
-                    <td><span class="status ${statusClass}">${o.status}</span></td>
+                    <td>${itemsSummary}</td>
+                    <td>${totalQuantity}</td>
+                    <td>$${total}</td>
+                    <td>$${amountPaid}</td>
+                    <td><span class="status ${statusClass}">${t(status.toLowerCase())}</span></td>
                     <td>
-                        <button class="action-btn edit" data-id="${o.id}" data-type="order" title="Edit"><i class="fas fa-edit"></i></button>
-                        <button class="action-btn delete" data-id="${o.id}" data-type="order" title="Delete"><i class="fas fa-trash"></i></button>
-                        <button class="action-btn pay" data-id="${o.id}" data-type="order" title="Register Payment"><i class="fas fa-dollar-sign"></i></button>
+                        <button class="action-btn edit" data-id="${o.id}" data-type="order" title="${t('edit')}"><i class="fas fa-edit"></i></button>
+                        <button class="action-btn delete" data-id="${o.id}" data-type="order" title="${t('delete')}"><i class="fas fa-trash"></i></button>
+                        <button class="action-btn pay" data-id="${o.id}" data-type="order" title="${t('pay')}"><i class="fas fa-dollar-sign"></i></button>
                     </td>
                 </tr>
             `;
@@ -235,16 +425,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderPayments() {
         paymentsTableBody.innerHTML = '';
-        payments.sort((a, b) => new Date(b.date) - new Date(a.date));
-        payments.forEach(p => {
-            const order = orders.find(o => o.id === p.orderId);
-            const customer = customers.find(c => c.id === order?.customerId)?.name || 'N/A';
+        const validPayments = payments.filter(p => p && p.date);
+        validPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
+        validPayments.forEach(p => {
+            const order = orders.find(o => o && o.id === p.orderId);
+            const customer = customers.find(c => c && c.id === order?.customerId)?.name || 'N/A';
+            const orderId = order ? `Order #${order.id.substring(0, 5)}...` : 'N/A';
+            const amount = typeof p.amount === 'number' ? p.amount.toFixed(2) : '0.00';
+
             const row = `
                 <tr>
                     <td>${new Date(p.date).toLocaleDateString()}</td>
                     <td>${customer}</td>
-                    <td>Order #${order?.id.substring(0, 5)}...</td>
-                    <td>$${p.amount.toFixed(2)}</td>
+                    <td>${orderId}</td>
+                    <td>$${amount}</td>
                     <td>${p.reference || ''}</td>
                 </tr>
             `;
@@ -269,14 +463,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Modals ---
-    function openModal(modalId) {
+    let onModalClose = null;
+    function openModal(modalId, callback = null) {
         document.getElementById(modalId).classList.remove('hidden');
         modalBackdrop.classList.remove('hidden');
+        onModalClose = callback;
     }
 
     function closeModal() {
         modals.forEach(m => m.classList.add('hidden'));
         modalBackdrop.classList.add('hidden');
+        if (onModalClose) {
+            onModalClose();
+            onModalClose = null;
+        }
     }
 
     modalBackdrop.addEventListener('click', closeModal);
@@ -286,33 +486,188 @@ document.addEventListener('DOMContentLoaded', () => {
     addProductBtn.addEventListener('click', () => {
         productForm.reset();
         document.getElementById('product-id').value = '';
-        document.getElementById('product-modal-title').textContent = 'New Product';
+        document.getElementById('product-modal-title').textContent = t('new_product');
         openModal('product-modal');
     });
 
     addCustomerBtn.addEventListener('click', () => {
         customerForm.reset();
         document.getElementById('customer-id').value = '';
-        document.getElementById('customer-modal-title').textContent = 'New Customer';
+        document.getElementById('customer-modal-title').textContent = t('new_customer');
         openModal('customer-modal');
     });
 
     addOrderBtn.addEventListener('click', () => {
         orderForm.reset();
+        document.getElementById('order-items-container').innerHTML = '';
         document.getElementById('order-id').value = '';
-        populateSelect('order-customer', customers, 'id', 'name');
-        populateSelect('order-product', products, 'id', 'description');
-        document.getElementById('order-modal-title').textContent = 'New Order';
+        document.getElementById('order-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('order-payment-details').classList.add('hidden');
+        setupCustomerAutocomplete();
+        addOrderItem();
+        updateOrderTotal();
+        document.getElementById('order-modal-title').textContent = t('new_order');
         openModal('order-modal');
     });
 
+    document.getElementById('order-status').addEventListener('change', (e) => {
+        const paymentDetails = document.getElementById('order-payment-details');
+        if (e.target.value === 'Paid' || e.target.value === 'Partial') {
+            paymentDetails.classList.remove('hidden');
+        } else {
+            paymentDetails.classList.add('hidden');
+        }
+    });
+
+    document.getElementById('add-customer-from-order-btn').addEventListener('click', () => {
+        document.getElementById('order-modal').classList.add('hidden');
+        openModal('customer-modal', (newCustomerId) => {
+            document.getElementById('order-modal').classList.remove('hidden');
+            const newCustomer = customers.find(c => c.id === newCustomerId);
+            if (newCustomer) {
+                document.getElementById('order-customer-search').value = newCustomer.name;
+                document.getElementById('order-customer-id').value = newCustomer.id;
+            }
+        });
+    });
+
+    document.getElementById('add-item-btn').addEventListener('click', addOrderItem);
+
     addPaymentBtn.addEventListener('click', () => {
         paymentForm.reset();
-        populateSelect('payment-order', orders, 'id', 'id'); // Simple display, could be improved
-        document.getElementById('payment-modal-title').textContent = 'New Payment';
+        document.getElementById('payment-date').value = new Date().toISOString().split('T')[0];
+
+        // Populate customer dropdown
+        const sortedCustomers = [...customers].sort((a, b) => a.name.localeCompare(b.name));
+        populateSelect('payment-customer', sortedCustomers, 'id', 'name');
+
+        // Reset and disable order dropdown
+        const paymentOrderSelect = document.getElementById('payment-order');
+        paymentOrderSelect.innerHTML = '<option value="">' + t('select_customer_first') + '</option>';
+        paymentOrderSelect.disabled = true;
+
+        document.getElementById('payment-modal-title').textContent = t('new_payment');
         openModal('payment-modal');
     });
 
+    document.getElementById('payment-customer').addEventListener('change', (e) => {
+        const customerId = e.target.value;
+        const paymentOrderSelect = document.getElementById('payment-order');
+        const paymentAmountInput = document.getElementById('payment-amount');
+
+        if (!customerId) {
+            paymentOrderSelect.innerHTML = '<option value="">' + t('select_customer_first') + '</option>';
+            paymentOrderSelect.disabled = true;
+            paymentAmountInput.value = '';
+            return;
+        }
+
+        const pendingOrders = orders.filter(o => o.customerId === customerId && o.status !== 'Paid' && o.total > (o.amountPaid || 0));
+
+        if (pendingOrders.length === 0) {
+            paymentOrderSelect.innerHTML = '<option value="">' + t('no_pending_orders') + '</option>';
+            paymentOrderSelect.disabled = true;
+            return;
+        }
+
+        paymentOrderSelect.innerHTML = '<option value="">' + t('select_an_order') + '</option>';
+        pendingOrders.forEach(o => {
+            const balanceDue = o.total - (o.amountPaid || 0);
+            const option = document.createElement('option');
+            option.value = o.id;
+            option.textContent = `Order of ${new Date(o.date).toLocaleDateString()} - Total: $${o.total.toFixed(2)}, Pending: $${balanceDue.toFixed(2)}`;
+            option.dataset.balance = balanceDue.toFixed(2);
+            paymentOrderSelect.appendChild(option);
+        });
+
+        paymentOrderSelect.disabled = false;
+    });
+
+    document.getElementById('payment-order').addEventListener('change', (e) => {
+        const selectedOption = e.target.options[e.target.selectedIndex];
+        const balance = selectedOption.dataset.balance;
+        document.getElementById('payment-amount').value = balance || '';
+    });
+
+
+    function addOrderItem(item = {}) {
+        const container = document.getElementById('order-items-container');
+        const itemDiv = document.createElement('div');
+        itemDiv.classList.add('item');
+
+        const sortedProducts = [...products].sort((a, b) => a.description.localeCompare(b.description));
+        const productOptions = sortedProducts.map(p => `<option value="${p.id}" ${p.id === item.productId ? 'selected' : ''}>${p.description}</option>`).join('');
+
+        itemDiv.innerHTML = `
+            <select class="item-product" required>${productOptions}</select>
+            <input type="number" class="item-quantity" value="${item.quantity || 1}" min="1" required>
+            <select class="item-price-type">
+                <option value="retail" ${item.priceType === 'retail' ? 'selected' : ''}>${t('retail_price')}</option>
+                <option value="wholesale" ${item.priceType === 'wholesale' ? 'selected' : ''}>${t('wholesale_price')}</option>
+            </select>
+            <button type="button" class="action-btn delete remove-item-btn"><i class="fas fa-trash"></i></button>
+        `;
+
+        container.appendChild(itemDiv);
+
+        itemDiv.querySelector('.remove-item-btn').addEventListener('click', () => {
+            itemDiv.remove();
+            updateOrderTotal();
+        });
+
+        itemDiv.querySelector('.item-product').addEventListener('change', updateOrderTotal);
+        itemDiv.querySelector('.item-quantity').addEventListener('input', updateOrderTotal);
+        itemDiv.querySelector('.item-price-type').addEventListener('change', updateOrderTotal);
+    }
+
+    function updateOrderTotal() {
+        let total = 0;
+        document.querySelectorAll('#order-items-container .item').forEach(itemDiv => {
+            const productId = itemDiv.querySelector('.item-product').value;
+            const quantity = parseInt(itemDiv.querySelector('.item-quantity').value);
+            const priceType = itemDiv.querySelector('.item-price-type').value;
+            const product = products.find(p => p.id === productId);
+
+            if (product && quantity > 0) {
+                const price = priceType === 'wholesale' ? product.wholesalePrice : product.retailPrice;
+                total += price * quantity;
+            }
+        });
+        document.getElementById('order-total-display').textContent = `$${total.toFixed(2)}`;
+    }
+
+    function setupCustomerAutocomplete() {
+        const searchInput = document.getElementById('order-customer-search');
+        const resultsContainer = document.getElementById('customer-autocomplete-results');
+        const customerIdInput = document.getElementById('order-customer-id');
+
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            if (!searchTerm) {
+                resultsContainer.innerHTML = '';
+                customerIdInput.value = '';
+                return;
+            }
+            const filtered = customers.filter(c => c.name.toLowerCase().includes(searchTerm));
+            resultsContainer.innerHTML = '';
+            filtered.forEach(customer => {
+                const div = document.createElement('div');
+                div.textContent = customer.name;
+                div.addEventListener('click', () => {
+                    searchInput.value = customer.name;
+                    customerIdInput.value = customer.id;
+                    resultsContainer.innerHTML = '';
+                });
+                resultsContainer.appendChild(div);
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!resultsContainer.contains(e.target) && e.target !== searchInput) {
+                resultsContainer.innerHTML = '';
+            }
+        });
+    }
 
     // --- Form Submissions ---
     productForm.addEventListener('submit', async (e) => {
@@ -336,31 +691,75 @@ document.addEventListener('DOMContentLoaded', () => {
             name: document.getElementById('customer-name').value,
             phone: document.getElementById('customer-phone').value,
         };
-        await saveOrUpdate('customers', id, data);
-        closeModal();
-        await initApp();
+        const newCustomerId = await saveOrUpdate('customers', id, data);
+        await fetchData(); // Fetch latest customers to ensure the new one is available
+
+        if (onModalClose) {
+            // First, manually close the customer modal
+            document.getElementById('customer-modal').classList.add('hidden');
+
+            // Then, execute the callback which will re-open the order modal
+            onModalClose(newCustomerId || id);
+            onModalClose = null; // Clear callback
+        } else {
+            // Standard behavior when not opened from another modal
+            closeModal();
+        }
+        await renderCustomers(); // Re-render customer list in the background
     });
 
     orderForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('order-id').value;
-        const productId = document.getElementById('order-product').value;
-        const product = products.find(p => p.id === productId);
-        const quantity = parseInt(document.getElementById('order-quantity').value);
+
+        const items = [];
+        let total = 0;
+        document.querySelectorAll('#order-items-container .item').forEach(itemDiv => {
+            const productId = itemDiv.querySelector('.item-product').value;
+            const quantity = parseInt(itemDiv.querySelector('.item-quantity').value);
+            const priceType = itemDiv.querySelector('.item-price-type').value;
+            const product = products.find(p => p.id === productId);
+
+            if (product && quantity > 0) {
+                const price = priceType === 'wholesale' ? product.wholesalePrice : product.retailPrice;
+                items.push({ productId, quantity, priceType, price });
+                total += price * quantity;
+            }
+        });
+
         const status = document.getElementById('order-status').value;
-        const total = product.retailPrice * quantity; // Assuming retail for now
+        const amountPaidInput = document.getElementById('order-amount-paid');
+        const bankReferenceInput = document.getElementById('order-bank-reference');
+
+        let amountPaid = 0;
+        if (status === 'Paid') {
+            amountPaid = total;
+        } else if (status === 'Partial') {
+            amountPaid = parseFloat(amountPaidInput.value) || 0;
+        }
 
         const data = {
-            customerId: document.getElementById('order-customer').value,
-            productId: productId,
-            quantity: quantity,
+            customerId: document.getElementById('order-customer-id').value,
+            items: items,
             total: total,
             status: status,
-            amountPaid: status === 'Paid' ? total : 0,
-            date: new Date().toISOString()
+            amountPaid: amountPaid,
+            date: new Date(document.getElementById('order-date').value).toISOString()
         };
 
-        await saveOrUpdate('orders', id, data);
+        const orderId = await saveOrUpdate('orders', id, data);
+
+        // If a payment was made, create a corresponding payment record
+        if (amountPaid > 0) {
+            const paymentData = {
+                orderId: orderId,
+                amount: amountPaid,
+                reference: bankReferenceInput.value,
+                date: data.date
+            };
+            await addDoc(collection(db, `users/${currentUser.uid}/payments`), paymentData);
+        }
+
         closeModal();
         await initApp();
     });
@@ -397,8 +796,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const collectionRef = collection(db, `users/${currentUser.uid}/${collectionName}`);
         if (id) {
             await updateDoc(doc(collectionRef, id), data);
+            return id;
         } else {
-            await addDoc(collectionRef, data);
+            const newDocRef = await addDoc(collectionRef, data);
+            return newDocRef.id;
         }
     }
 
@@ -434,33 +835,47 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function handleEdit(id, type) {
-        const item = window[type+'s'].find(i => i.id === id);
-        if (!item) return;
-
+        let item;
         switch(type) {
             case 'product':
+                item = products.find(i => i.id === id);
+                if (!item) return;
                 document.getElementById('product-id').value = item.id;
                 document.getElementById('product-description').value = item.description;
                 document.getElementById('product-retail-price').value = item.retailPrice;
                 document.getElementById('product-wholesale-price').value = item.wholesalePrice;
-                document.getElementById('product-modal-title').textContent = 'Edit Product';
+                document.getElementById('product-modal-title').textContent = t('edit_product');
                 openModal('product-modal');
                 break;
             case 'customer':
+                item = customers.find(i => i.id === id);
+                if (!item) return;
                 document.getElementById('customer-id').value = item.id;
                 document.getElementById('customer-name').value = item.name;
                 document.getElementById('customer-phone').value = item.phone;
-                document.getElementById('customer-modal-title').textContent = 'Edit Customer';
+                document.getElementById('customer-modal-title').textContent = t('edit_customer');
                 openModal('customer-modal');
                 break;
             case 'order':
-                 document.getElementById('order-id').value = item.id;
-                 populateSelect('order-customer', customers, 'id', 'name', item.customerId);
-                 populateSelect('order-product', products, 'id', 'description', item.productId);
-                 document.getElementById('order-quantity').value = item.quantity;
-                 document.getElementById('order-status').value = item.status;
-                 document.getElementById('order-modal-title').textContent = 'Edit Order';
-                 openModal('order-modal');
+                item = orders.find(i => i.id === id);
+                if (!item) return;
+
+                document.getElementById('order-id').value = item.id;
+                document.getElementById('order-date').value = new Date(item.date).toISOString().split('T')[0];
+
+                const customer = customers.find(c => c.id === item.customerId);
+                if (customer) {
+                    document.getElementById('order-customer-search').value = customer.name;
+                    document.getElementById('order-customer-id').value = customer.id;
+                }
+
+                document.getElementById('order-items-container').innerHTML = '';
+                item.items.forEach(orderItem => addOrderItem(orderItem));
+                updateOrderTotal();
+
+                document.getElementById('order-status').value = item.status;
+                document.getElementById('order-modal-title').textContent = t('edit_order');
+                openModal('order-modal');
                 break;
         }
     }
@@ -553,8 +968,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupDashboard() {
         populateDateFilters();
         updateDashboard();
-        dashboardMonthSelect.addEventListener('change', updateDashboard);
-        dashboardYearSelect.addEventListener('change', updateDashboard);
+        if (!listenersAttached) {
+            dashboardMonthSelect.addEventListener('change', updateDashboard);
+            dashboardYearSelect.addEventListener('change', updateDashboard);
+        }
     }
 
     function populateDateFilters() {
@@ -582,6 +999,37 @@ document.addEventListener('DOMContentLoaded', () => {
         renderSalesChart(filteredOrders, month, year);
         renderProductSalesChart(filteredOrders);
         renderPendingOrders(orders); // Show all pending, not just this month's
+        renderCustomerRankingChart(filteredOrders);
+    }
+
+    function renderCustomerRankingChart(filteredOrders) {
+        const customerSales = {};
+        filteredOrders.forEach(o => {
+            const customerName = customers.find(c => c.id === o.customerId)?.name || 'Unknown';
+            customerSales[customerName] = (customerSales[customerName] || 0) + o.total;
+        });
+
+        const sortedCustomers = Object.entries(customerSales).sort(([,a],[,b]) => b-a);
+        const labels = sortedCustomers.map(([name]) => name);
+        const data = sortedCustomers.map(([,total]) => total);
+
+        const ctx = document.getElementById('customer-ranking-chart').getContext('2d');
+        if (customerRankingChart) customerRankingChart.destroy();
+        customerRankingChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: t('sales'),
+                    data: data,
+                    backgroundColor: '#28a745',
+                }]
+            },
+            options: {
+                responsive: true,
+                indexAxis: 'y', // Horizontal bars
+            }
+        });
     }
 
     function renderSalesChart(filteredOrders, month, year) {
@@ -594,32 +1042,79 @@ document.addEventListener('DOMContentLoaded', () => {
             salesData[day - 1] += o.total;
         });
 
+        const cumulativeSalesData = salesData.reduce((acc, val, i) => {
+            acc[i] = (acc[i-1] || 0) + val;
+            return acc;
+        }, []);
+
         const ctx = document.getElementById('sales-chart').getContext('2d');
         if (salesChart) salesChart.destroy();
         salesChart = new Chart(ctx, {
-            type: 'line',
+            type: 'bar', // Using a mixed chart type
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Daily Sales',
+                    label: t('daily_sales'),
                     data: salesData,
-                    borderColor: 'rgba(0, 123, 255, 1)',
-                    backgroundColor: 'rgba(0, 123, 255, 0.2)',
-                    fill: true,
+                    backgroundColor: 'rgba(0, 123, 255, 0.6)',
+                    yAxisID: 'y',
+                }, {
+                    label: t('cumulative_sales'),
+                    data: cumulativeSalesData,
+                    type: 'line',
+                    borderColor: 'rgba(40, 167, 69, 1)',
+                    backgroundColor: 'rgba(40, 167, 69, 0.2)',
+                    tension: 0.1,
+                    yAxisID: 'y1',
                 }]
             },
-            options: { responsive: true }
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                         title: {
+                            display: true,
+                            text: t('daily_sales')
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: t('cumulative_sales')
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                    },
+                }
+            }
         });
     }
 
     function renderProductSalesChart(filteredOrders) {
-         const productSales = {};
-         filteredOrders.forEach(o => {
-             const productName = products.find(p => p.id === o.productId)?.description || 'Unknown';
-             productSales[productName] = (productSales[productName] || 0) + o.total;
-         });
+        const productSales = {};
+        filteredOrders.forEach(o => {
+            if (Array.isArray(o.items)) {
+                o.items.forEach(item => {
+                    const product = products.find(p => p.id === item.productId);
+                    const productName = product ? product.description : 'Unknown';
+                    const itemTotal = item.price * item.quantity;
+                    productSales[productName] = (productSales[productName] || 0) + itemTotal;
+                });
+            }
+        });
 
-         const labels = Object.keys(productSales);
+        const labels = Object.keys(productSales);
          const data = Object.values(productSales);
 
          const ctx = document.getElementById('product-sales-chart').getContext('2d');
@@ -638,17 +1133,41 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderPendingOrders(allOrders) {
-        pendingOrdersList.innerHTML = '';
-        const pending = allOrders.filter(o => o.status !== 'Paid').slice(0, 5); // Show top 5
+        const pendingPaymentsTableBody = document.getElementById('pending-payments-table-body');
+        if (!pendingPaymentsTableBody) return;
+
+        const pending = allOrders.filter(o => o.status !== 'Paid' && o.total > (o.amountPaid || 0));
+        const totalPendingAmount = pending.reduce((sum, o) => sum + (o.total - (o.amountPaid || 0)), 0);
+
+        // Update the card title with the total
+        const pendingPaymentsCard = pendingPaymentsTableBody.closest('.card');
+        if (pendingPaymentsCard) {
+            pendingPaymentsCard.querySelector('h3').textContent = `${t('pending_payments')} ($${totalPendingAmount.toFixed(2)})`;
+        }
+
+
+        pendingPaymentsTableBody.innerHTML = '';
         if (pending.length === 0) {
-            pendingOrdersList.innerHTML = '<li>No pending payments.</li>';
+            pendingPaymentsTableBody.innerHTML = `<tr><td colspan="3">${t('no_pending_payments')}</td></tr>`;
             return;
         }
+
+        // Sort by oldest first
+        pending.sort((a, b) => new Date(a.date) - new Date(b.date));
+
         pending.forEach(o => {
             const customerName = customers.find(c => c.id === o.customerId)?.name || 'N/A';
             const remaining = o.total - (o.amountPaid || 0);
-            const li = `<li>${customerName} - $${remaining.toFixed(2)} remaining</li>`;
-            pendingOrdersList.innerHTML += li;
+            const orderDate = new Date(o.date);
+            const daysOld = Math.floor((new Date() - orderDate) / (1000 * 60 * 60 * 24));
+            const row = `
+                <tr>
+                    <td>${customerName}</td>
+                    <td>$${remaining.toFixed(2)}</td>
+                    <td>${daysOld} ${t('days_old')}</td>
+                </tr>
+            `;
+            pendingPaymentsTableBody.innerHTML += row;
         });
     }
 
