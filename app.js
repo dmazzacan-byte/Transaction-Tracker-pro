@@ -1,3 +1,28 @@
+// --- Promise Timeout Utility ---
+/**
+ * Wraps a promise with a timeout.
+ * @param {Promise} promise The promise to wrap.
+ * @param {number} ms The timeout in milliseconds.
+ * @param {string} timeoutError The error message to throw on timeout.
+ * @returns {Promise} A new promise that rejects on timeout.
+ */
+function promiseWithTimeout(promise, ms, timeoutError = 'La operación ha tardado demasiado en responder.') {
+    // Create a new promise that rejects in `ms` milliseconds
+    const timeout = new Promise((_, reject) => {
+        const id = setTimeout(() => {
+            clearTimeout(id);
+            reject(new Error(timeoutError));
+        }, ms);
+    });
+
+    // Race the input promise against the timeout
+    return Promise.race([
+        promise,
+        timeout
+    ]);
+}
+// --- End Utility ---
+
 import { login, logout, monitorAuthState } from './firebase.js';
 import { initProducts } from './products.js';
 import { initCustomers } from './customers.js';
