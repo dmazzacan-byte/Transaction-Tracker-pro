@@ -1,0 +1,21 @@
+{
+    "login": "Iniciar Sesión", "register": "Registrarse", "email": "Correo Electrónico", "password": "Contraseña",
+    "dont_have_account": "¿No tienes una cuenta?", "register_here": "Regístrate aquí",
+    "already_have_account": "¿Ya tienes una cuenta?", "login_here": "Inicia sesión aquí",
+    "dashboard": "Dashboard", "orders": "Pedidos", "customers": "Clientes", "payments": "Pagos", "products": "Productos", "settings": "Configuración", "logout": "Cerrar Sesión",
+    "new_order": "Nuevo Pedido", "new_customer": "Nuevo Cliente", "new_payment": "Nuevo Pago", "new_product": "Nuevo Producto",
+    "date": "Fecha", "customer": "Cliente", "product": "Producto", "quantity": "Cantidad", "total": "Total", "amount_paid": "Monto Pagado", "status": "Estado", "actions": "Acciones",
+    "name": "Nombre", "phone": "Teléfono", "monthly_volume": "Volumen Mensual", "historical_volume": "Volumen Histórico", "pending_amount": "Monto Pendiente",
+    "order": "Pedido", "amount": "Monto", "reference": "Referencia", "description": "Descripción", "retail_price": "Precio Minorista", "wholesale_price": "Precio Mayorista",
+    "user_management": "Gestión de Usuarios", "data_management": "Gestión de Datos", "backup_data": "Copia de Seguridad (Excel)", "restore_data": "Restaurar Datos",
+    "save_order": "Guardar Pedido", "save_customer": "Guardar Cliente", "save_payment": "Guardar Pago", "save_product": "Guardar Producto",
+    "edit": "Editar", "delete": "Eliminar", "pay": "Registrar Pago", "select": "Seleccione...",
+    "pending": "Pendiente", "partial": "Parcial", "paid": "Pagado",
+    "daily_sales": "Ventas Diarias", "pending_payments": "Pagos Pendientes", "sales_by_product": "Ventas por Producto", "no_pending_payments": "No hay pagos pendientes.",
+    "confirm_delete": "¿Estás seguro de que quieres eliminar este {{type}}?",
+    "edit_product": "Editar Producto", "edit_customer": "Editar Cliente", "edit_order": "Editar Pedido",
+    "confirm_restore": "Esto sobrescribirá los datos existentes. ¿Estás seguro?", "restore_success": "¡Datos restaurados con éxito!",
+    "days_old": "días", "customer_ranking": "Ranking de Clientes", "sales": "Ventas",
+    "new_customer_short": "Nuevo", "all_customers": "Todos los Clientes", "all_months": "Todos los Meses", "all_years": "Todos los Años",
+    "order_items": "Ítems del Pedido", "add_item": "Añadir Producto", "search_orders": "Buscar Pedidos..."
+}
