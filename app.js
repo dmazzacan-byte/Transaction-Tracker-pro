@@ -38,42 +38,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginButton = document.getElementById('login-button');
     const logoutButton = document.getElementById('logout-button');
 
-    /**
-     * Initializes the main application UI.
-     * Hides the login screen, shows the app, and initializes all modules.
-     */
-    async function initializeAppUI() {
-        try {
-            // When user is authenticated, hide login and show the main app
-            loginContainer.style.display = 'none';
-            appContainer.style.display = 'flex';
-
-            // Initialize all application modules and wait for them to complete, with a 10-second timeout.
-            const initializationPromise = Promise.all([
-                initProducts(),
-                initCustomers(),
-                initOrders(),
-                initPayments(),
-                initDashboard(),
-                initSettings()
-            ]);
-
-            await promiseWithTimeout(initializationPromise, 10000, 'La carga de datos inicial ha superado el tiempo límite.');
-        } catch (error) {
-            // If any initialization fails, log the user out and show an error
-            console.error("Failed to initialize application after login:", error);
-            // Display the specific timeout message, or a generic one for other errors.
-            loginError.textContent = error.message.includes('límite')
-                ? error.message
-                : "Error al cargar los datos de la aplicación. Inténtalo de nuevo.";
-            await logout(); // Ensure user is logged out to prevent inconsistent state
-        }
-    }
-
-    // Monitor auth state to handle initial page load (if user is already logged in) and logout
-    monitorAuthState((user) => {
-        if (!user) {
-            // If user signs out, or is not signed in, show the login screen.
+    // Monitor auth state
+    monitorAuthState(async (user) => {
+        if (user) {
+            try {
+                // When user is authenticated, hide login and show the main app
+                loginContainer.style.display = 'none';
+                appContainer.style.display = 'flex';
+                // Initialize all application modules
+                initProducts();
+                initCustomers();
+                initOrders();
+                initPayments();
+                initDashboard();
+                initSettings();
+            } catch (error) {
+                // If any initialization fails, log the user out and show an error
+                console.error("Failed to initialize application after login:", error);
+                loginError.textContent = "Error al cargar los datos de la aplicación. Inténtalo de nuevo.";
+                await logout(); // Ensure user is logged out to prevent inconsistent state
+            }
+        } else {
+            // If user is not authenticated, show the login screen
             loginContainer.style.display = 'flex';
             appContainer.style.display = 'none';
         }
@@ -91,11 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
         loginButton.textContent = 'Logging in...';
 
         try {
-            const userCredential = await login(email, password);
-            if (userCredential.user) {
-                // If login is successful, directly initialize the application UI.
-                await initializeAppUI();
-            }
+            await login(email, password);
+            // Auth state change will handle UI update
         } catch (error) {
             console.error('Login failed:', error);
             // Provide specific error messages
