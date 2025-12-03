@@ -122,11 +122,11 @@ const handleTableClick = async (e) => {
     }
 };
 
-export const initOrders = () => {
+export const initOrders = async () => {
     document.getElementById('add-order-btn').addEventListener('click', () => openModal());
     orderModal.querySelector('.close-button').addEventListener('click', closeModal);
     orderForm.addEventListener('submit', handleFormSubmit);
     ordersTableBody.addEventListener('click', handleTableClick);
 
-    renderOrders();
+    await renderOrders();
 };

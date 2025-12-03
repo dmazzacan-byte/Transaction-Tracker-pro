@@ -85,11 +85,11 @@ const handleTableClick = async (e) => {
     }
 };
 
-export const initProducts = () => {
+export const initProducts = async () => {
     document.getElementById('add-product-btn').addEventListener('click', () => openModal());
     productModal.querySelector('.close-button').addEventListener('click', closeModal);
     productForm.addEventListener('submit', handleFormSubmit);
     productsTableBody.addEventListener('click', handleTableClick);
 
-    renderProducts();
+    await renderProducts();
 };

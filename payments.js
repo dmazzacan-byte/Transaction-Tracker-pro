@@ -114,11 +114,11 @@ const handleTableClick = async (e) => {
     }
 };
 
-export const initPayments = () => {
+export const initPayments = async () => {
     document.getElementById('add-payment-btn').addEventListener('click', () => openModal());
     paymentModal.querySelector('.close-button').addEventListener('click', closeModal);
     paymentForm.addEventListener('submit', handleFormSubmit);
     paymentsTableBody.addEventListener('click', handleTableClick);
 
-    renderPayments();
+    await renderPayments();
 };
