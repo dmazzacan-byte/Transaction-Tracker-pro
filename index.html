@@ -31,6 +31,7 @@
     </div>
 
     <div id="app-container" class="hidden">
+        <button id="menu-toggle"><i class="fas fa-bars"></i></button>
         <nav class="sidebar">
             <div class="sidebar-header">
                 <h3>TransactionTracker</h3>
@@ -64,19 +65,45 @@
                     </div>
                     <div class="card">
                         <h3>Pending Payments</h3>
-                        <ul id="pending-orders-list"></ul>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n-key="customer">Customer</th>
+                                        <th data-i18n-key="amount">Amount</th>
+                                        <th data-i18n-key="age">Age</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pending-payments-table-body">
+                                    <!-- Pending payments will be dynamically inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                     <div class="card">
-                        <h3>Sales by Product</h3>
+                        <h3 data-i18n-key="sales_by_product">Sales by Product</h3>
                         <canvas id="product-sales-chart"></canvas>
+                    </div>
+                    <div class="card">
+                        <h3 data-i18n-key="customer_ranking">Customer Ranking</h3>
+                        <canvas id="customer-ranking-chart"></canvas>
                     </div>
                 </div>
             </div>
 
             <div id="orders" class="tab-content">
                  <div class="header">
-                    <h1>Orders</h1>
-                    <button id="add-order-btn" class="btn-primary"><i class="fas fa-plus"></i> New Order</button>
+                    <h1 data-i18n-key="orders">Orders</h1>
+                     <div class="filters">
+                        <label data-i18n-key="filter_by">Filter by:</label>
+                        <select id="orders-customer-filter"></select>
+                        <select id="orders-month-filter"></select>
+                        <select id="orders-year-filter"></select>
+                    </div>
+                    <div class="search-container">
+                        <input type="text" id="orders-search" data-i18n-placeholder="search_orders">
+                    </div>
+                    <button id="add-order-btn" class="btn-primary"><i class="fas fa-plus"></i> <span data-i18n-key="new_order">New Order</span></button>
                 </div>
                 <div class="table-container">
                     <table>
@@ -100,6 +127,9 @@
             <div id="customers" class="tab-content">
                 <div class="header">
                     <h1>Customers</h1>
+                    <div class="search-container">
+                        <input type="text" id="customers-search" data-i18n-placeholder="search_customers">
+                    </div>
                     <button id="add-customer-btn" class="btn-primary"><i class="fas fa-plus"></i> New Customer</button>
                 </div>
                 <div class="table-container">
@@ -143,6 +173,9 @@
             <div id="products" class="tab-content">
                 <div class="header">
                     <h1>Products</h1>
+                    <div class="search-container">
+                        <input type="text" id="products-search" data-i18n-placeholder="search_products">
+                    </div>
                     <button id="add-product-btn" class="btn-primary"><i class="fas fa-plus"></i> New Product</button>
                 </div>
                 <div class="table-container">
@@ -198,22 +231,49 @@
     <div id="order-modal" class="modal hidden">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
-            <h2 id="order-modal-title">New Order</h2>
+            <h2 id="order-modal-title" data-i18n-key="new_order">New Order</h2>
             <form id="order-form">
                 <input type="hidden" id="order-id">
-                <label for="order-customer">Customer:</label>
-                <select id="order-customer" required></select>
-                <label for="order-product">Product:</label>
-                <select id="order-product" required></select>
-                <label for="order-quantity">Quantity:</label>
-                <input type="number" id="order-quantity" min="1" required>
-                <label for="order-status">Payment Status:</label>
+                <label for="order-date" data-i18n-key="date">Date:</label>
+                <input type="date" id="order-date" required>
+                <div class="form-row-space-between">
+                    <label for="order-customer-search" data-i18n-key="customer">Customer:</label>
+                    <button type="button" id="add-customer-from-order-btn" class="btn-link">+ <span data-i18n-key="new_customer_short">New</span></button>
+                </div>
+                <div class="autocomplete-container">
+                    <input type="text" id="order-customer-search" required autocomplete="off">
+                    <div id="customer-autocomplete-results" class="autocomplete-results"></div>
+                </div>
+                <input type="hidden" id="order-customer-id">
+
+                <hr>
+                <h4 data-i18n-key="order_items">Order Items</h4>
+                <div id="order-items-container">
+                    <!-- Items will be added here dynamically -->
+                </div>
+                <button type="button" id="add-item-btn" class="btn-secondary">+ <span data-i18n-key="add_item">Add Product</span></button>
+                <hr>
+
+                <div class="form-row-space-between">
+                    <strong data-i18n-key="total">Total:</strong>
+                    <strong id="order-total-display">$0.00</strong>
+                </div>
+
+                <label for="order-status" data-i18n-key="status">Payment Status:</label>
                 <select id="order-status">
-                    <option value="Pending">Pending</option>
-                    <option value="Partial">Partial</option>
-                    <option value="Paid">Paid</option>
+                    <option value="Pending" data-i18n-key="pending">Pending</option>
+                    <option value="Partial" data-i18n-key="partial">Partial</option>
+                    <option value="Paid" data-i18n-key="paid">Paid</option>
                 </select>
-                <button type="submit" class="btn-primary">Save Order</button>
+
+                <div id="order-payment-details" class="hidden">
+                    <label for="order-amount-paid" data-i18n-key="amount_paid">Amount Paid:</label>
+                    <input type="number" id="order-amount-paid" step="0.01">
+                    <label for="order-bank-reference" data-i18n-key="reference">Bank Reference:</label>
+                    <input type="text" id="order-bank-reference">
+                </div>
+
+                <button type="submit" class="btn-primary" data-i18n-key="save_order">Save Order</button>
             </form>
         </div>
     </div>
@@ -236,17 +296,21 @@
     <div id="payment-modal" class="modal hidden">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
-            <h2 id="payment-modal-title">New Payment</h2>
+            <h2 id="payment-modal-title" data-i18n-key="new_payment">New Payment</h2>
             <form id="payment-form">
                 <input type="hidden" id="payment-id">
                 <input type="hidden" id="payment-order-id">
-                <label for="payment-order">Order:</label>
-                <select id="payment-order" required></select>
-                <label for="payment-amount">Amount:</label>
+                <label for="payment-date" data-i18n-key="date">Date:</label>
+                <input type="date" id="payment-date" required>
+                <label for="payment-customer" data-i18n-key="customer">Customer:</label>
+                <select id="payment-customer" required></select>
+                <label for="payment-order" data-i18n-key="order">Order:</label>
+                <select id="payment-order" required disabled></select>
+                <label for="payment-amount" data-i18n-key="amount">Amount:</label>
                 <input type="number" id="payment-amount" step="0.01" required>
-                 <label for="payment-reference">Bank Reference:</label>
+                 <label for="payment-reference" data-i18n-key="reference">Bank Reference:</label>
                 <input type="text" id="payment-reference">
-                <button type="submit" class="btn-primary">Save Payment</button>
+                <button type="submit" class="btn-primary" data-i18n-key="save_payment">Save Payment</button>
             </form>
         </div>
     </div>
@@ -271,6 +335,6 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/app.js?v=1.1"></script>
 </body>
 </html>
