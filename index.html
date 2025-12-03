@@ -65,7 +65,20 @@
                     </div>
                     <div class="card">
                         <h3>Pending Payments</h3>
-                        <ul id="pending-orders-list"></ul>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n-key="customer">Customer</th>
+                                        <th data-i18n-key="amount">Amount</th>
+                                        <th data-i18n-key="age">Age</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pending-payments-table-body">
+                                    <!-- Pending payments will be dynamically inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                     <div class="card">
                         <h3 data-i18n-key="sales_by_product">Sales by Product</h3>
@@ -113,6 +126,9 @@
             <div id="customers" class="tab-content">
                 <div class="header">
                     <h1>Customers</h1>
+                    <div class="search-container">
+                        <input type="text" id="customers-search" data-i18n-placeholder="search_customers">
+                    </div>
                     <button id="add-customer-btn" class="btn-primary"><i class="fas fa-plus"></i> New Customer</button>
                 </div>
                 <div class="table-container">
@@ -156,6 +172,9 @@
             <div id="products" class="tab-content">
                 <div class="header">
                     <h1>Products</h1>
+                    <div class="search-container">
+                        <input type="text" id="products-search" data-i18n-placeholder="search_products">
+                    </div>
                     <button id="add-product-btn" class="btn-primary"><i class="fas fa-plus"></i> New Product</button>
                 </div>
                 <div class="table-container">
@@ -305,6 +324,6 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/app.js?v=1.1"></script>
 </body>
 </html>

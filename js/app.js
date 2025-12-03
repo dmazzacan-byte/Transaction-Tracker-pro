@@ -21,6 +21,7 @@ import {
 document.addEventListener('DOMContentLoaded', () => {
     // --- State ---
     let currentUser = null;
+    let listenersAttached = false;
     let products = [];
     let customers = [];
     let orders = [];
@@ -307,8 +308,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <tr>
                     <td>${c.name}</td>
                     <td>${c.phone || ''}</td>
-                    <td>N/A</td> <!-- Monthly Volume requires more complex calculation -->
-                    <td>N/A</td> <!-- Historical Volume requires more complex calculation -->
+                    <td>$${monthlyVolume.toFixed(2)}</td>
+                    <td>$${historicalVolume.toFixed(2)}</td>
                     <td>$${pendingAmount.toFixed(2)}</td>
                     <td>
                         <button class="action-btn edit" data-id="${c.id}" data-type="customer" title="${t('edit')}"><i class="fas fa-edit"></i></button>
@@ -479,6 +480,124 @@ document.addEventListener('DOMContentLoaded', () => {
         openModal('payment-modal');
     });
 
+    document.getElementById('payment-customer').addEventListener('change', (e) => {
+        const customerId = e.target.value;
+        const paymentOrderSelect = document.getElementById('payment-order');
+        const paymentAmountInput = document.getElementById('payment-amount');
+
+        if (!customerId) {
+            paymentOrderSelect.innerHTML = '<option value="">' + t('select_customer_first') + '</option>';
+            paymentOrderSelect.disabled = true;
+            paymentAmountInput.value = '';
+            return;
+        }
+
+        const pendingOrders = orders.filter(o => o.customerId === customerId && o.status !== 'Paid' && o.total > (o.amountPaid || 0));
+
+        if (pendingOrders.length === 0) {
+            paymentOrderSelect.innerHTML = '<option value="">' + t('no_pending_orders') + '</option>';
+            paymentOrderSelect.disabled = true;
+            return;
+        }
+
+        paymentOrderSelect.innerHTML = '<option value="">' + t('select_an_order') + '</option>';
+        pendingOrders.forEach(o => {
+            const balanceDue = o.total - (o.amountPaid || 0);
+            const option = document.createElement('option');
+            option.value = o.id;
+            option.textContent = `Order of ${new Date(o.date).toLocaleDateString()} - Total: $${o.total.toFixed(2)}, Pending: $${balanceDue.toFixed(2)}`;
+            option.dataset.balance = balanceDue.toFixed(2);
+            paymentOrderSelect.appendChild(option);
+        });
+
+        paymentOrderSelect.disabled = false;
+    });
+
+    document.getElementById('payment-order').addEventListener('change', (e) => {
+        const selectedOption = e.target.options[e.target.selectedIndex];
+        const balance = selectedOption.dataset.balance;
+        document.getElementById('payment-amount').value = balance || '';
+    });
+
+
+    function addOrderItem(item = {}) {
+        const container = document.getElementById('order-items-container');
+        const itemDiv = document.createElement('div');
+        itemDiv.classList.add('item');
+
+        const sortedProducts = [...products].sort((a, b) => a.description.localeCompare(b.description));
+        const productOptions = sortedProducts.map(p => `<option value="${p.id}" ${p.id === item.productId ? 'selected' : ''}>${p.description}</option>`).join('');
+
+        itemDiv.innerHTML = `
+            <select class="item-product" required>${productOptions}</select>
+            <input type="number" class="item-quantity" value="${item.quantity || 1}" min="1" required>
+            <select class="item-price-type">
+                <option value="retail" ${item.priceType === 'retail' ? 'selected' : ''}>${t('retail_price')}</option>
+                <option value="wholesale" ${item.priceType === 'wholesale' ? 'selected' : ''}>${t('wholesale_price')}</option>
+            </select>
+            <button type="button" class="action-btn delete remove-item-btn"><i class="fas fa-trash"></i></button>
+        `;
+
+        container.appendChild(itemDiv);
+
+        itemDiv.querySelector('.remove-item-btn').addEventListener('click', () => {
+            itemDiv.remove();
+            updateOrderTotal();
+        });
+
+        itemDiv.querySelector('.item-product').addEventListener('change', updateOrderTotal);
+        itemDiv.querySelector('.item-quantity').addEventListener('input', updateOrderTotal);
+        itemDiv.querySelector('.item-price-type').addEventListener('change', updateOrderTotal);
+    }
+
+    function updateOrderTotal() {
+        let total = 0;
+        document.querySelectorAll('#order-items-container .item').forEach(itemDiv => {
+            const productId = itemDiv.querySelector('.item-product').value;
+            const quantity = parseInt(itemDiv.querySelector('.item-quantity').value);
+            const priceType = itemDiv.querySelector('.item-price-type').value;
+            const product = products.find(p => p.id === productId);
+
+            if (product && quantity > 0) {
+                const price = priceType === 'wholesale' ? product.wholesalePrice : product.retailPrice;
+                total += price * quantity;
+            }
+        });
+        document.getElementById('order-total-display').textContent = `$${total.toFixed(2)}`;
+    }
+
+    function setupCustomerAutocomplete() {
+        const searchInput = document.getElementById('order-customer-search');
+        const resultsContainer = document.getElementById('customer-autocomplete-results');
+        const customerIdInput = document.getElementById('order-customer-id');
+
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            if (!searchTerm) {
+                resultsContainer.innerHTML = '';
+                customerIdInput.value = '';
+                return;
+            }
+            const filtered = customers.filter(c => c.name.toLowerCase().includes(searchTerm));
+            resultsContainer.innerHTML = '';
+            filtered.forEach(customer => {
+                const div = document.createElement('div');
+                div.textContent = customer.name;
+                div.addEventListener('click', () => {
+                    searchInput.value = customer.name;
+                    customerIdInput.value = customer.id;
+                    resultsContainer.innerHTML = '';
+                });
+                resultsContainer.appendChild(div);
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!resultsContainer.contains(e.target) && e.target !== searchInput) {
+                resultsContainer.innerHTML = '';
+            }
+        });
+    }
 
     function addOrderItem(item = {}) {
         const container = document.getElementById('order-items-container');
@@ -621,7 +740,19 @@ document.addEventListener('DOMContentLoaded', () => {
             date: new Date(document.getElementById('order-date').value).toISOString()
         };
 
-        await saveOrUpdate('orders', id, data);
+        const orderId = await saveOrUpdate('orders', id, data);
+
+        // If a payment was made, create a corresponding payment record
+        if (amountPaid > 0) {
+            const paymentData = {
+                orderId: orderId,
+                amount: amountPaid,
+                reference: bankReferenceInput.value,
+                date: data.date
+            };
+            await addDoc(collection(db, `users/${currentUser.uid}/payments`), paymentData);
+        }
+
         closeModal();
         await initApp();
     });
@@ -901,32 +1032,79 @@ document.addEventListener('DOMContentLoaded', () => {
             salesData[day - 1] += o.total;
         });
 
+        const cumulativeSalesData = salesData.reduce((acc, val, i) => {
+            acc[i] = (acc[i-1] || 0) + val;
+            return acc;
+        }, []);
+
         const ctx = document.getElementById('sales-chart').getContext('2d');
         if (salesChart) salesChart.destroy();
         salesChart = new Chart(ctx, {
-            type: 'line',
+            type: 'bar', // Using a mixed chart type
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Daily Sales',
+                    label: t('daily_sales'),
                     data: salesData,
-                    borderColor: 'rgba(0, 123, 255, 1)',
-                    backgroundColor: 'rgba(0, 123, 255, 0.2)',
-                    fill: true,
+                    backgroundColor: 'rgba(0, 123, 255, 0.6)',
+                    yAxisID: 'y',
+                }, {
+                    label: t('cumulative_sales'),
+                    data: cumulativeSalesData,
+                    type: 'line',
+                    borderColor: 'rgba(40, 167, 69, 1)',
+                    backgroundColor: 'rgba(40, 167, 69, 0.2)',
+                    tension: 0.1,
+                    yAxisID: 'y1',
                 }]
             },
-            options: { responsive: true }
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                         title: {
+                            display: true,
+                            text: t('daily_sales')
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: t('cumulative_sales')
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                    },
+                }
+            }
         });
     }
 
     function renderProductSalesChart(filteredOrders) {
-         const productSales = {};
-         filteredOrders.forEach(o => {
-             const productName = products.find(p => p.id === o.productId)?.description || 'Unknown';
-             productSales[productName] = (productSales[productName] || 0) + o.total;
-         });
+        const productSales = {};
+        filteredOrders.forEach(o => {
+            if (Array.isArray(o.items)) {
+                o.items.forEach(item => {
+                    const product = products.find(p => p.id === item.productId);
+                    const productName = product ? product.description : 'Unknown';
+                    const itemTotal = item.price * item.quantity;
+                    productSales[productName] = (productSales[productName] || 0) + itemTotal;
+                });
+            }
+        });
 
-         const labels = Object.keys(productSales);
+        const labels = Object.keys(productSales);
          const data = Object.values(productSales);
 
          const ctx = document.getElementById('product-sales-chart').getContext('2d');

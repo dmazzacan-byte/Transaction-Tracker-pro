@@ -285,7 +285,8 @@ th {
 /* --- Dashboard --- */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: 1fr 1fr;
+    grid-auto-rows: minmax(400px, auto); /* Give rows a minimum height */
     gap: 2rem;
 }
 
@@ -294,6 +295,13 @@ th {
     padding: 1.5rem;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+}
+
+.card canvas {
+    flex-grow: 1;
+    min-height: 0; /* Important for flexbox canvas resizing */
 }
 
 .card h3 {
