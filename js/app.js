@@ -16,10 +16,12 @@ import {
     where,
     writeBatch
 } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+import { setLanguage, t } from './i18n.js';
 
+document.addEventListener('DOMContentLoaded', async () => {
+    await setLanguage('es');
 
-document.addEventListener('DOMContentLoaded', () => {
-    // --- State ---
+    // --- State & Elements ---
     let currentUser = null;
     let listenersAttached = false;
     let products = [];
@@ -148,13 +150,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    loginForm.addEventListener('submit', (e) => {
+    DOMElements.loginForm.addEventListener('submit', e => {
         e.preventDefault();
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
+        DOMElements.loader.style.display = 'flex';
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
         signInWithEmailAndPassword(auth, email, password)
-            .catch(error => alert(error.message));
+            .catch(err => {
+                DOMElements.loader.style.display = 'none';
+                alert(err.message);
+            });
     });
+    DOMElements.registerForm.addEventListener('submit', e => { e.preventDefault(); createUserWithEmailAndPassword(auth, document.getElementById('register-email').value, document.getElementById('register-password').value).then(cred => addDoc(collection(db, `users/${cred.user.uid}/users`), { uid: cred.user.uid, email: cred.user.email, name: cred.user.email.split('@')[0] })).catch(err => alert(err.message)); });
+    DOMElements.logoutBtn.addEventListener('click', () => signOut(auth));
+    document.getElementById('show-register').addEventListener('click', () => { document.getElementById('login-view').classList.add('hidden'); document.getElementById('register-view').classList.remove('hidden'); });
+    document.getElementById('show-login').addEventListener('click', () => { document.getElementById('login-view').classList.remove('hidden'); document.getElementById('register-view').classList.add('hidden'); });
 
     registerForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -238,30 +248,21 @@ document.addEventListener('DOMContentLoaded', () => {
         translateUI();
     }
 
-    // --- Data Fetching ---
     async function fetchData() {
         const userId = currentUser.uid;
-        const collections = {
-            products: collection(db, `users/${userId}/products`),
-            customers: collection(db, `users/${userId}/customers`),
-            orders: collection(db, `users/${userId}/orders`),
-            payments: collection(db, `users/${userId}/payments`),
-            users: collection(db, `users/${userId}/users`)
-        };
-
-        const [productsSnap, customersSnap, ordersSnap, paymentsSnap, usersSnap] = await Promise.all([
-            getDocs(collections.products),
-            getDocs(collections.customers),
-            getDocs(collections.orders),
-            getDocs(collections.payments),
-            getDocs(collections.users)
+        const [pSnap, cSnap, oSnap, paySnap, uSnap] = await Promise.all([
+            getDocs(collection(db, `users/${userId}/products`)),
+            getDocs(collection(db, `users/${userId}/customers`)),
+            getDocs(collection(db, `users/${userId}/orders`)),
+            getDocs(collection(db, `users/${userId}/payments`)),
+            getDocs(collection(db, `users/${userId}/users`))
         ]);
-
-        products = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        customers = customersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        orders = ordersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        payments = paymentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        products = pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        customers = cSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        orders = oSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        payments = paySnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const userDocs = uSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        users = userDocs.some(u => u.uid === currentUser.uid) ? userDocs : [...userDocs, { uid: currentUser.uid, email: currentUser.email, name: currentUser.email.split('@')[0] }];
     }
 
     // --- Rendering ---
