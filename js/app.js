@@ -269,21 +269,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             products = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             customers = customersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        orders = ordersSnap.docs.map(doc => {
-            const order = { id: doc.id, ...doc.data() };
-            // Backwards compatibility for old data structure
-            if (order.productId && !order.items) {
-                order.items = [{
-                    productId: order.productId,
-                    quantity: order.quantity,
-                    price: order.total / order.quantity,
-                    priceType: 'retail' // Assume retail for old orders
-                }];
-            }
-            return order;
-        });
-        payments = paymentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            orders = ordersSnap.docs.map(doc => {
+                const order = { id: doc.id, ...doc.data() };
+                // Backwards compatibility for old data structure
+                if (order.productId && !order.items) {
+                    order.items = [{
+                        productId: order.productId,
+                        quantity: order.quantity,
+                        price: order.total / order.quantity,
+                        priceType: 'retail' // Assume retail for old orders
+                    }];
+                }
+                return order;
+            });
+            payments = paymentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            alert("Data fetch successful.");
+        } catch (error) {
+            console.error("Error fetching data:", error);
+            alert(`Error fetching data: ${error.message}`);
+        }
     }
 
     // --- Rendering ---
