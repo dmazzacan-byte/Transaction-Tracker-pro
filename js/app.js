@@ -235,14 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAll();
         setupDashboard();
         setupOrderFilters();
-        if (!listenersAttached) {
-            customersSearch.addEventListener('input', () => renderCustomers(customersSearch.value));
-            productsSearch.addEventListener('input', () => renderProducts(productsSearch.value));
-            listenersAttached = true;
-        }
-
         translateUI();
-        document.body.dataset.ready = 'true';
     }
 
     // --- Data Fetching ---
@@ -302,27 +295,14 @@ document.addEventListener('DOMContentLoaded', () => {
      function renderCustomers(searchTerm = '') {
         customersTableBody.innerHTML = '';
         const filteredCustomers = customers.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
 
         // Sort alphabetically by name
         filteredCustomers.sort((a, b) => a.name.localeCompare(b.name));
 
         filteredCustomers.forEach(c => {
-            const customerOrders = orders.filter(o => o.customerId === c.id);
-
-            const historicalVolume = customerOrders.reduce((sum, o) => sum + o.total, 0);
-
-            const monthlyVolume = customerOrders
-                .filter(o => {
-                    const orderDate = new Date(o.date);
-                    return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
-                })
-                .reduce((sum, o) => sum + o.total, 0);
-
-            const pendingAmount = customerOrders
-                .filter(o => o.status !== 'Paid')
-                .reduce((sum, o) => sum + (o.total - (o.amountPaid || 0)), 0);
+            // Basic calculations - can be expanded
+            const pendingAmount = orders.filter(o => o.customerId === c.id && o.status !== 'Paid')
+                                       .reduce((sum, o) => sum + (o.total - (o.amountPaid || 0)), 0);
 
             const row = `
                 <tr>
@@ -471,21 +451,11 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('order-items-container').innerHTML = '';
         document.getElementById('order-id').value = '';
         document.getElementById('order-date').value = new Date().toISOString().split('T')[0];
-        document.getElementById('order-payment-details').classList.add('hidden');
         setupCustomerAutocomplete();
         addOrderItem();
         updateOrderTotal();
         document.getElementById('order-modal-title').textContent = t('new_order');
         openModal('order-modal');
-    });
-
-    document.getElementById('order-status').addEventListener('change', (e) => {
-        const paymentDetails = document.getElementById('order-payment-details');
-        if (e.target.value === 'Paid' || e.target.value === 'Partial') {
-            paymentDetails.classList.remove('hidden');
-        } else {
-            paymentDetails.classList.add('hidden');
-        }
     });
 
     document.getElementById('add-customer-from-order-btn').addEventListener('click', () => {
@@ -505,16 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
     addPaymentBtn.addEventListener('click', () => {
         paymentForm.reset();
         document.getElementById('payment-date').value = new Date().toISOString().split('T')[0];
-
-        // Populate customer dropdown
-        const sortedCustomers = [...customers].sort((a, b) => a.name.localeCompare(b.name));
-        populateSelect('payment-customer', sortedCustomers, 'id', 'name');
-
-        // Reset and disable order dropdown
-        const paymentOrderSelect = document.getElementById('payment-order');
-        paymentOrderSelect.innerHTML = '<option value="">' + t('select_customer_first') + '</option>';
-        paymentOrderSelect.disabled = true;
-
+        populateSelect('payment-order', orders, 'id', 'id'); // Simple display, could be improved
         document.getElementById('payment-modal-title').textContent = t('new_payment');
         openModal('payment-modal');
     });
@@ -638,6 +599,84 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function addOrderItem(item = {}) {
+        const container = document.getElementById('order-items-container');
+        const itemDiv = document.createElement('div');
+        itemDiv.classList.add('item');
+
+        const productOptions = products.map(p => `<option value="${p.id}" ${p.id === item.productId ? 'selected' : ''}>${p.description}</option>`).join('');
+
+        itemDiv.innerHTML = `
+            <select class="item-product" required>${productOptions}</select>
+            <input type="number" class="item-quantity" value="${item.quantity || 1}" min="1" required>
+            <select class="item-price-type">
+                <option value="retail" ${item.priceType === 'retail' ? 'selected' : ''}>${t('retail_price')}</option>
+                <option value="wholesale" ${item.priceType === 'wholesale' ? 'selected' : ''}>${t('wholesale_price')}</option>
+            </select>
+            <button type="button" class="action-btn delete remove-item-btn"><i class="fas fa-trash"></i></button>
+        `;
+
+        container.appendChild(itemDiv);
+
+        itemDiv.querySelector('.remove-item-btn').addEventListener('click', () => {
+            itemDiv.remove();
+            updateOrderTotal();
+        });
+
+        itemDiv.querySelector('.item-product').addEventListener('change', updateOrderTotal);
+        itemDiv.querySelector('.item-quantity').addEventListener('input', updateOrderTotal);
+        itemDiv.querySelector('.item-price-type').addEventListener('change', updateOrderTotal);
+    }
+
+    function updateOrderTotal() {
+        let total = 0;
+        document.querySelectorAll('#order-items-container .item').forEach(itemDiv => {
+            const productId = itemDiv.querySelector('.item-product').value;
+            const quantity = parseInt(itemDiv.querySelector('.item-quantity').value);
+            const priceType = itemDiv.querySelector('.item-price-type').value;
+            const product = products.find(p => p.id === productId);
+
+            if (product && quantity > 0) {
+                const price = priceType === 'wholesale' ? product.wholesalePrice : product.retailPrice;
+                total += price * quantity;
+            }
+        });
+        document.getElementById('order-total-display').textContent = `$${total.toFixed(2)}`;
+    }
+
+    function setupCustomerAutocomplete() {
+        const searchInput = document.getElementById('order-customer-search');
+        const resultsContainer = document.getElementById('customer-autocomplete-results');
+        const customerIdInput = document.getElementById('order-customer-id');
+
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            if (!searchTerm) {
+                resultsContainer.innerHTML = '';
+                customerIdInput.value = '';
+                return;
+            }
+            const filtered = customers.filter(c => c.name.toLowerCase().includes(searchTerm));
+            resultsContainer.innerHTML = '';
+            filtered.forEach(customer => {
+                const div = document.createElement('div');
+                div.textContent = customer.name;
+                div.addEventListener('click', () => {
+                    searchInput.value = customer.name;
+                    customerIdInput.value = customer.id;
+                    resultsContainer.innerHTML = '';
+                });
+                resultsContainer.appendChild(div);
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!resultsContainer.contains(e.target) && e.target !== searchInput) {
+                resultsContainer.innerHTML = '';
+            }
+        });
+    }
+
     // --- Form Submissions ---
     productForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -661,20 +700,15 @@ document.addEventListener('DOMContentLoaded', () => {
             phone: document.getElementById('customer-phone').value,
         };
         const newCustomerId = await saveOrUpdate('customers', id, data);
-        await fetchData(); // Fetch latest customers to ensure the new one is available
+        await fetchData(); // Fetch latest customers
 
         if (onModalClose) {
-            // First, manually close the customer modal
-            document.getElementById('customer-modal').classList.add('hidden');
-
-            // Then, execute the callback which will re-open the order modal
             onModalClose(newCustomerId || id);
             onModalClose = null; // Clear callback
+            // No need to call closeModal, it's handled by the flow
         } else {
-            // Standard behavior when not opened from another modal
             closeModal();
         }
-        await renderCustomers(); // Re-render customer list in the background
     });
 
     orderForm.addEventListener('submit', async (e) => {
@@ -697,22 +731,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const status = document.getElementById('order-status').value;
-        const amountPaidInput = document.getElementById('order-amount-paid');
-        const bankReferenceInput = document.getElementById('order-bank-reference');
-
-        let amountPaid = 0;
-        if (status === 'Paid') {
-            amountPaid = total;
-        } else if (status === 'Partial') {
-            amountPaid = parseFloat(amountPaidInput.value) || 0;
-        }
-
         const data = {
             customerId: document.getElementById('order-customer-id').value,
             items: items,
             total: total,
             status: status,
-            amountPaid: amountPaid,
+            amountPaid: status === 'Paid' ? total : 0,
             date: new Date(document.getElementById('order-date').value).toISOString()
         };
 
@@ -1099,22 +1123,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderPendingOrders(allOrders) {
-        const pendingPaymentsTableBody = document.getElementById('pending-payments-table-body');
-        if (!pendingPaymentsTableBody) return;
-
-        const pending = allOrders.filter(o => o.status !== 'Paid' && o.total > (o.amountPaid || 0));
+        const pending = allOrders.filter(o => o.status !== 'Paid');
         const totalPendingAmount = pending.reduce((sum, o) => sum + (o.total - (o.amountPaid || 0)), 0);
 
         // Update the card title with the total
-        const pendingPaymentsCard = pendingPaymentsTableBody.closest('.card');
-        if (pendingPaymentsCard) {
-            pendingPaymentsCard.querySelector('h3').textContent = `${t('pending_payments')} ($${totalPendingAmount.toFixed(2)})`;
-        }
+        const pendingPaymentsCard = document.querySelector('#pending-orders-list').closest('.card');
+        pendingPaymentsCard.querySelector('h3').textContent = `${t('pending_payments')} ($${totalPendingAmount.toFixed(2)})`;
 
-
-        pendingPaymentsTableBody.innerHTML = '';
+        pendingOrdersList.innerHTML = '';
         if (pending.length === 0) {
-            pendingPaymentsTableBody.innerHTML = `<tr><td colspan="3">${t('no_pending_payments')}</td></tr>`;
+            pendingOrdersList.innerHTML = `<li>${t('no_pending_payments')}</li>`;
             return;
         }
 
@@ -1126,14 +1144,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const remaining = o.total - (o.amountPaid || 0);
             const orderDate = new Date(o.date);
             const daysOld = Math.floor((new Date() - orderDate) / (1000 * 60 * 60 * 24));
-            const row = `
-                <tr>
-                    <td>${customerName}</td>
-                    <td>$${remaining.toFixed(2)}</td>
-                    <td>${daysOld} ${t('days_old')}</td>
-                </tr>
-            `;
-            pendingPaymentsTableBody.innerHTML += row;
+            const li = `<li>${customerName} - $${remaining.toFixed(2)} (${daysOld} ${t('days_old')})</li>`;
+            pendingOrdersList.innerHTML += li;
         });
     }
 

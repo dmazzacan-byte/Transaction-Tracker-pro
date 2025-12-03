@@ -264,14 +264,6 @@
                     <option value="Partial" data-i18n-key="partial">Partial</option>
                     <option value="Paid" data-i18n-key="paid">Paid</option>
                 </select>
-
-                <div id="order-payment-details" class="hidden">
-                    <label for="order-amount-paid" data-i18n-key="amount_paid">Amount Paid:</label>
-                    <input type="number" id="order-amount-paid" step="0.01">
-                    <label for="order-bank-reference" data-i18n-key="reference">Bank Reference:</label>
-                    <input type="text" id="order-bank-reference">
-                </div>
-
                 <button type="submit" class="btn-primary" data-i18n-key="save_order">Save Order</button>
             </form>
         </div>
@@ -301,10 +293,8 @@
                 <input type="hidden" id="payment-order-id">
                 <label for="payment-date" data-i18n-key="date">Date:</label>
                 <input type="date" id="payment-date" required>
-                <label for="payment-customer" data-i18n-key="customer">Customer:</label>
-                <select id="payment-customer" required></select>
                 <label for="payment-order" data-i18n-key="order">Order:</label>
-                <select id="payment-order" required disabled></select>
+                <select id="payment-order" required></select>
                 <label for="payment-amount" data-i18n-key="amount">Amount:</label>
                 <input type="number" id="payment-amount" step="0.01" required>
                  <label for="payment-reference" data-i18n-key="reference">Bank Reference:</label>
