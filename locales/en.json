@@ -11,7 +11,7 @@
     "save_order": "Save Order", "save_customer": "Save Customer", "save_payment": "Save Payment", "save_product": "Save Product",
     "edit": "Edit", "delete": "Delete", "pay": "Register Payment", "select": "Select...",
     "pending": "Pending", "partial": "Partial", "paid": "Paid",
-    "daily_sales": "Daily Sales", "cumulative_sales": "Cumulative Sales", "pending_payments": "Pending Payments", "sales_by_product": "Sales by Product", "no_pending_payments": "No pending payments.",
+    "daily_sales": "Daily Sales", "pending_payments": "Pending Payments", "sales_by_product": "Sales by Product", "no_pending_payments": "No pending payments.",
     "confirm_delete": "Are you sure you want to delete this {{type}}?",
     "edit_product": "Edit Product", "edit_customer": "Edit Customer", "edit_order": "Edit Order",
     "confirm_restore": "This will overwrite existing data. Are you sure?", "restore_success": "Data restored successfully!",

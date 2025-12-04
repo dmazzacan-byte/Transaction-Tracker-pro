@@ -11,7 +11,7 @@
     "save_order": "Guardar Pedido", "save_customer": "Guardar Cliente", "save_payment": "Guardar Pago", "save_product": "Guardar Producto",
     "edit": "Editar", "delete": "Eliminar", "pay": "Registrar Pago", "select": "Seleccione...",
     "pending": "Pendiente", "partial": "Parcial", "paid": "Pagado",
-    "daily_sales": "Ventas Diarias", "cumulative_sales": "Ventas Acumuladas", "pending_payments": "Pagos Pendientes", "sales_by_product": "Ventas por Producto", "no_pending_payments": "No hay pagos pendientes.",
+    "daily_sales": "Ventas Diarias", "pending_payments": "Pagos Pendientes", "sales_by_product": "Ventas por Producto", "no_pending_payments": "No hay pagos pendientes.",
     "confirm_delete": "¿Estás seguro de que quieres eliminar este {{type}}?",
     "edit_product": "Editar Producto", "edit_customer": "Editar Cliente", "edit_order": "Editar Pedido",
     "confirm_restore": "Esto sobrescribirá los datos existentes. ¿Estás seguro?", "restore_success": "¡Datos restaurados con éxito!",

@@ -16,10 +16,12 @@ import {
     where,
     writeBatch
 } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+import { setLanguage, t } from './i18n.js';
 
+document.addEventListener('DOMContentLoaded', async () => {
+    await setLanguage('es');
 
-document.addEventListener('DOMContentLoaded', () => {
-    // --- State ---
+    // --- State & Elements ---
     let currentUser = null;
     let listenersAttached = false;
     let products = [];
@@ -27,12 +29,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let orders = [];
     let payments = [];
     let users = [];
-    let translations = {}; // Initialize translations object
+    let translations = {};
 
     // --- DOM Elements ---
     const authContainer = document.getElementById('auth-container');
     const appContainer = document.getElementById('app-container');
     const menuToggle = document.getElementById('menu-toggle');
+    const sidebarMenu = document.querySelector('.sidebar ul');
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
     const showRegister = document.getElementById('show-register');
@@ -147,13 +150,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    loginForm.addEventListener('submit', (e) => {
+    DOMElements.loginForm.addEventListener('submit', e => {
         e.preventDefault();
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
+        DOMElements.loader.style.display = 'flex';
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
         signInWithEmailAndPassword(auth, email, password)
-            .catch(error => alert(error.message));
+            .catch(err => {
+                DOMElements.loader.style.display = 'none';
+                alert(err.message);
+            });
     });
+    DOMElements.registerForm.addEventListener('submit', e => { e.preventDefault(); createUserWithEmailAndPassword(auth, document.getElementById('register-email').value, document.getElementById('register-password').value).then(cred => addDoc(collection(db, `users/${cred.user.uid}/users`), { uid: cred.user.uid, email: cred.user.email, name: cred.user.email.split('@')[0] })).catch(err => alert(err.message)); });
+    DOMElements.logoutBtn.addEventListener('click', () => signOut(auth));
+    document.getElementById('show-register').addEventListener('click', () => { document.getElementById('login-view').classList.add('hidden'); document.getElementById('register-view').classList.remove('hidden'); });
+    document.getElementById('show-login').addEventListener('click', () => { document.getElementById('login-view').classList.remove('hidden'); document.getElementById('register-view').classList.add('hidden'); });
 
     registerForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -218,12 +229,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 ordersYearFilter.value
             );
         };
-        if (!listenersAttached) {
-            ordersCustomerFilter.addEventListener('change', applyFilters);
-            ordersMonthFilter.addEventListener('change', applyFilters);
-            ordersYearFilter.addEventListener('change', applyFilters);
-            ordersSearch.addEventListener('input', applyFilters);
-        }
+        ordersCustomerFilter.addEventListener('change', applyFilters);
+        ordersMonthFilter.addEventListener('change', applyFilters);
+        ordersYearFilter.addEventListener('change', applyFilters);
+        ordersSearch.addEventListener('input', applyFilters);
+
         applyFilters(); // Initial render
     }
 
@@ -235,57 +245,24 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAll();
         setupDashboard();
         setupOrderFilters();
-        if (!listenersAttached) {
-            customersSearch.addEventListener('input', () => renderCustomers(customersSearch.value));
-            productsSearch.addEventListener('input', () => renderProducts(productsSearch.value));
-            listenersAttached = true;
-        }
-
         translateUI();
-        document.body.dataset.ready = 'true';
     }
 
-    // --- Data Fetching ---
     async function fetchData() {
-        try {
-            const userId = currentUser.uid;
-            const collections = {
-                products: collection(db, `users/${userId}/products`),
-                customers: collection(db, `users/${userId}/customers`),
-                orders: collection(db, `users/${userId}/orders`),
-                payments: collection(db, `users/${userId}/payments`),
-                users: collection(db, `users/${userId}/users`)
-            };
-
-            const [productsSnap, customersSnap, ordersSnap, paymentsSnap, usersSnap] = await Promise.all([
-                getDocs(collections.products),
-                getDocs(collections.customers),
-                getDocs(collections.orders),
-                getDocs(collections.payments),
-                getDocs(collections.users)
-            ]);
-
-            products = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            customers = customersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            orders = ordersSnap.docs.map(doc => {
-                const order = { id: doc.id, ...doc.data() };
-                // Backwards compatibility for old data structure
-                if (order.productId && !order.items) {
-                    order.items = [{
-                        productId: order.productId,
-                        quantity: order.quantity,
-                        price: order.total / order.quantity,
-                        priceType: 'retail' // Assume retail for old orders
-                    }];
-                }
-                return order;
-            });
-            payments = paymentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        } catch (error) {
-            console.error("Error fetching data:", error);
-            alert(`Error fetching data: ${error.message}`);
-        }
+        const userId = currentUser.uid;
+        const [pSnap, cSnap, oSnap, paySnap, uSnap] = await Promise.all([
+            getDocs(collection(db, `users/${userId}/products`)),
+            getDocs(collection(db, `users/${userId}/customers`)),
+            getDocs(collection(db, `users/${userId}/orders`)),
+            getDocs(collection(db, `users/${userId}/payments`)),
+            getDocs(collection(db, `users/${userId}/users`))
+        ]);
+        products = pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        customers = cSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        orders = oSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        payments = paySnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const userDocs = uSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        users = userDocs.some(u => u.uid === currentUser.uid) ? userDocs : [...userDocs, { uid: currentUser.uid, email: currentUser.email, name: currentUser.email.split('@')[0] }];
     }
 
     // --- Rendering ---
@@ -299,19 +276,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderProducts(searchTerm = '') {
         productsTableBody.innerHTML = '';
-        const filteredProducts = products.filter(p => p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()));
-        filteredProducts.sort((a, b) => (a.description || '').localeCompare(b.description || ''));
+        const filteredProducts = products.filter(p => p.description.toLowerCase().includes(searchTerm.toLowerCase()));
         filteredProducts.forEach(p => {
-            const retailPrice = typeof p.retailPrice === 'number' ? p.retailPrice.toFixed(2) : '0.00';
-            const wholesalePrice = typeof p.wholesalePrice === 'number' ? p.wholesalePrice.toFixed(2) : '0.00';
             const row = `
                 <tr>
                     <td>${p.description || 'N/A'}</td>
                     <td>$${retailPrice}</td>
                     <td>$${wholesalePrice}</td>
                     <td>
-                        <button class="action-btn edit" data-id="${p.id}" data-type="product" title="Edit"><i class="fas fa-edit"></i></button>
-                        <button class="action-btn delete" data-id="${p.id}" data-type="product" title="Delete"><i class="fas fa-trash"></i></button>
+                        <button class="action-btn edit" data-id="${p.id}" data-type="product" title="${t('edit')}"><i class="fas fa-edit"></i></button>
+                        <button class="action-btn delete" data-id="${p.id}" data-type="product" title="${t('delete')}"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
             `;
@@ -321,50 +295,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
      function renderCustomers(searchTerm = '') {
         customersTableBody.innerHTML = '';
-        if (!customers) return;
-
-        const filteredCustomers = customers.filter(c => c && c.name && c.name.toLowerCase().includes(searchTerm.toLowerCase()));
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
+        const filteredCustomers = customers.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
         // Sort alphabetically by name
-        filteredCustomers.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        filteredCustomers.sort((a, b) => a.name.localeCompare(b.name));
 
         filteredCustomers.forEach(c => {
-            const customerOrders = orders ? orders.filter(o => o && o.customerId === c.id) : [];
-
-            const historicalVolume = customerOrders.reduce((sum, o) => {
-                const total = parseFloat(o.total);
-                return sum + (isNaN(total) ? 0 : total);
-            }, 0);
-
-            const monthlyVolume = customerOrders
-                .filter(o => {
-                    if (!o.date) return false;
-                    const orderDate = new Date(o.date);
-                    // Check for valid date
-                    return !isNaN(orderDate.getTime()) && orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
-                })
-                .reduce((sum, o) => {
-                    const total = parseFloat(o.total);
-                    return sum + (isNaN(total) ? 0 : total);
-                }, 0);
-
-            const pendingAmount = customerOrders
-                .filter(o => o.status !== 'Paid')
-                .reduce((sum, o) => {
-                    const total = parseFloat(o.total) || 0;
-                    const amountPaid = parseFloat(o.amountPaid) || 0;
-                    return sum + (total - amountPaid);
-                }, 0);
+            // Basic calculations - can be expanded
+            const pendingAmount = orders.filter(o => o.customerId === c.id && o.status !== 'Paid')
+                                       .reduce((sum, o) => sum + (o.total - (o.amountPaid || 0)), 0);
 
             const row = `
                 <tr>
                     <td>${c.name || 'N/A'}</td>
                     <td>${c.phone || ''}</td>
-                    <td>$${(monthlyVolume || 0).toFixed(2)}</td>
-                    <td>$${(historicalVolume || 0).toFixed(2)}</td>
-                    <td>$${(pendingAmount || 0).toFixed(2)}</td>
+                    <td>$${monthlyVolume.toFixed(2)}</td>
+                    <td>$${historicalVolume.toFixed(2)}</td>
+                    <td>$${pendingAmount.toFixed(2)}</td>
                     <td>
                         <button class="action-btn edit" data-id="${c.id}" data-type="customer" title="${t('edit')}"><i class="fas fa-edit"></i></button>
                         <button class="action-btn delete" data-id="${c.id}" data-type="customer" title="${t('delete')}"><i class="fas fa-trash"></i></button>
@@ -377,13 +324,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderOrders(searchTerm = '', customerId, month, year) {
         ordersTableBody.innerHTML = '';
-        if (!orders) return;
 
-        let filteredOrders = orders.filter(o => {
-            if (!o || !o.date) return false;
-            const orderDate = new Date(o.date);
-            return !isNaN(orderDate.getTime());
-        });
+        let filteredOrders = [...orders];
 
         if (customerId) {
             filteredOrders = filteredOrders.filter(o => o.customerId === customerId);
@@ -397,11 +339,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (searchTerm) {
             const lowerCaseSearchTerm = searchTerm.toLowerCase();
             filteredOrders = filteredOrders.filter(o => {
-                const customerName = (customers.find(c => c && c.id === o.customerId)?.name || '').toLowerCase();
-                const items = Array.isArray(o.items) ? o.items : [];
-                const itemSummary = items.map(item => {
-                    const product = products.find(p => p && p.id === item.productId);
-                    return product ? (product.description || '').toLowerCase() : '';
+                const customerName = (customers.find(c => c.id === o.customerId)?.name || '').toLowerCase();
+                const itemSummary = o.items.map(item => {
+                    const product = products.find(p => p.id === item.productId);
+                    return product ? product.description.toLowerCase() : '';
                 }).join(' ');
                 return customerName.includes(lowerCaseSearchTerm) || itemSummary.includes(lowerCaseSearchTerm);
             });
@@ -410,29 +351,21 @@ document.addEventListener('DOMContentLoaded', () => {
         filteredOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         filteredOrders.forEach(o => {
-            const customer = customers.find(c => c && c.id === o.customerId)?.name || 'N/A';
-            const items = Array.isArray(o.items) ? o.items : [];
-            const itemsSummary = items.map(item => {
-                const product = products.find(p => p && p.id === item.productId);
-                const quantity = parseInt(item.quantity) || 0;
-                return `${quantity} x ${product ? (product.description || 'N/A') : 'N/A'}`;
+            const customer = customers.find(c => c.id === o.customerId)?.name || 'N/A';
+            const itemsSummary = o.items.map(item => {
+                const product = products.find(p => p.id === item.productId);
+                return `${item.quantity} x ${product ? product.description : 'N/A'}`;
             }).join('<br>');
-
-            const status = o.status || 'N/A';
-            const statusClass = `status-${status.toLowerCase()}`;
-            const totalQuantity = items.reduce((sum, item) => sum + (parseInt(item.quantity) || 0), 0);
-            const total = parseFloat(o.total);
-            const amountPaid = parseFloat(o.amountPaid);
-
+            const statusClass = `status-${o.status.toLowerCase()}`;
             const row = `
                 <tr>
                     <td>${new Date(o.date).toLocaleDateString()}</td>
                     <td>${customer}</td>
                     <td>${itemsSummary}</td>
-                    <td>${totalQuantity}</td>
-                    <td>$${!isNaN(total) ? total.toFixed(2) : '0.00'}</td>
-                    <td>$${!isNaN(amountPaid) ? amountPaid.toFixed(2) : '0.00'}</td>
-                    <td><span class="status ${statusClass}">${t(status.toLowerCase())}</span></td>
+                    <td>${o.items.reduce((sum, item) => sum + item.quantity, 0)}</td>
+                    <td>$${o.total.toFixed(2)}</td>
+                    <td>$${(o.amountPaid || 0).toFixed(2)}</td>
+                    <td><span class="status ${statusClass}">${t(o.status.toLowerCase())}</span></td>
                     <td>
                         <button class="action-btn edit" data-id="${o.id}" data-type="order" title="${t('edit')}"><i class="fas fa-edit"></i></button>
                         <button class="action-btn delete" data-id="${o.id}" data-type="order" title="${t('delete')}"><i class="fas fa-trash"></i></button>
@@ -483,7 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${u.name || u.email.split('@')[0]}</td>
                     <td>${u.email}</td>
                     <td>
-                         <button class="action-btn delete" data-id="${u.id}" data-type="user" title="Delete"><i class="fas fa-trash"></i></button>
+                         <button class="action-btn delete" data-id="${u.id}" data-type="user" title="${t('delete')}"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
             `;
@@ -531,21 +464,11 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('order-items-container').innerHTML = '';
         document.getElementById('order-id').value = '';
         document.getElementById('order-date').value = new Date().toISOString().split('T')[0];
-        document.getElementById('order-payment-details').classList.add('hidden');
         setupCustomerAutocomplete();
         addOrderItem();
         updateOrderTotal();
         document.getElementById('order-modal-title').textContent = t('new_order');
         openModal('order-modal');
-    });
-
-    document.getElementById('order-status').addEventListener('change', (e) => {
-        const paymentDetails = document.getElementById('order-payment-details');
-        if (e.target.value === 'Paid' || e.target.value === 'Partial') {
-            paymentDetails.classList.remove('hidden');
-        } else {
-            paymentDetails.classList.add('hidden');
-        }
     });
 
     document.getElementById('add-customer-from-order-btn').addEventListener('click', () => {
@@ -565,16 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
     addPaymentBtn.addEventListener('click', () => {
         paymentForm.reset();
         document.getElementById('payment-date').value = new Date().toISOString().split('T')[0];
-
-        // Populate customer dropdown
-        const sortedCustomers = [...customers].sort((a, b) => a.name.localeCompare(b.name));
-        populateSelect('payment-customer', sortedCustomers, 'id', 'name');
-
-        // Reset and disable order dropdown
-        const paymentOrderSelect = document.getElementById('payment-order');
-        paymentOrderSelect.innerHTML = '<option value="">' + t('select_customer_first') + '</option>';
-        paymentOrderSelect.disabled = true;
-
+        populateSelect('payment-order', orders, 'id', 'id'); // Simple display, could be improved
         document.getElementById('payment-modal-title').textContent = t('new_payment');
         openModal('payment-modal');
     });
@@ -698,6 +612,84 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function addOrderItem(item = {}) {
+        const container = document.getElementById('order-items-container');
+        const itemDiv = document.createElement('div');
+        itemDiv.classList.add('item');
+
+        const productOptions = products.map(p => `<option value="${p.id}" ${p.id === item.productId ? 'selected' : ''}>${p.description}</option>`).join('');
+
+        itemDiv.innerHTML = `
+            <select class="item-product" required>${productOptions}</select>
+            <input type="number" class="item-quantity" value="${item.quantity || 1}" min="1" required>
+            <select class="item-price-type">
+                <option value="retail" ${item.priceType === 'retail' ? 'selected' : ''}>${t('retail_price')}</option>
+                <option value="wholesale" ${item.priceType === 'wholesale' ? 'selected' : ''}>${t('wholesale_price')}</option>
+            </select>
+            <button type="button" class="action-btn delete remove-item-btn"><i class="fas fa-trash"></i></button>
+        `;
+
+        container.appendChild(itemDiv);
+
+        itemDiv.querySelector('.remove-item-btn').addEventListener('click', () => {
+            itemDiv.remove();
+            updateOrderTotal();
+        });
+
+        itemDiv.querySelector('.item-product').addEventListener('change', updateOrderTotal);
+        itemDiv.querySelector('.item-quantity').addEventListener('input', updateOrderTotal);
+        itemDiv.querySelector('.item-price-type').addEventListener('change', updateOrderTotal);
+    }
+
+    function updateOrderTotal() {
+        let total = 0;
+        document.querySelectorAll('#order-items-container .item').forEach(itemDiv => {
+            const productId = itemDiv.querySelector('.item-product').value;
+            const quantity = parseInt(itemDiv.querySelector('.item-quantity').value);
+            const priceType = itemDiv.querySelector('.item-price-type').value;
+            const product = products.find(p => p.id === productId);
+
+            if (product && quantity > 0) {
+                const price = priceType === 'wholesale' ? product.wholesalePrice : product.retailPrice;
+                total += price * quantity;
+            }
+        });
+        document.getElementById('order-total-display').textContent = `$${total.toFixed(2)}`;
+    }
+
+    function setupCustomerAutocomplete() {
+        const searchInput = document.getElementById('order-customer-search');
+        const resultsContainer = document.getElementById('customer-autocomplete-results');
+        const customerIdInput = document.getElementById('order-customer-id');
+
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            if (!searchTerm) {
+                resultsContainer.innerHTML = '';
+                customerIdInput.value = '';
+                return;
+            }
+            const filtered = customers.filter(c => c.name.toLowerCase().includes(searchTerm));
+            resultsContainer.innerHTML = '';
+            filtered.forEach(customer => {
+                const div = document.createElement('div');
+                div.textContent = customer.name;
+                div.addEventListener('click', () => {
+                    searchInput.value = customer.name;
+                    customerIdInput.value = customer.id;
+                    resultsContainer.innerHTML = '';
+                });
+                resultsContainer.appendChild(div);
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!resultsContainer.contains(e.target) && e.target !== searchInput) {
+                resultsContainer.innerHTML = '';
+            }
+        });
+    }
+
     // --- Form Submissions ---
     productForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -721,20 +713,15 @@ document.addEventListener('DOMContentLoaded', () => {
             phone: document.getElementById('customer-phone').value,
         };
         const newCustomerId = await saveOrUpdate('customers', id, data);
-        await fetchData(); // Fetch latest customers to ensure the new one is available
+        await fetchData(); // Fetch latest customers
 
         if (onModalClose) {
-            // First, manually close the customer modal
-            document.getElementById('customer-modal').classList.add('hidden');
-
-            // Then, execute the callback which will re-open the order modal
             onModalClose(newCustomerId || id);
             onModalClose = null; // Clear callback
+            // No need to call closeModal, it's handled by the flow
         } else {
-            // Standard behavior when not opened from another modal
             closeModal();
         }
-        await renderCustomers(); // Re-render customer list in the background
     });
 
     orderForm.addEventListener('submit', async (e) => {
@@ -757,22 +744,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const status = document.getElementById('order-status').value;
-        const amountPaidInput = document.getElementById('order-amount-paid');
-        const bankReferenceInput = document.getElementById('order-bank-reference');
-
-        let amountPaid = 0;
-        if (status === 'Paid') {
-            amountPaid = total;
-        } else if (status === 'Partial') {
-            amountPaid = parseFloat(amountPaidInput.value) || 0;
-        }
-
         const data = {
             customerId: document.getElementById('order-customer-id').value,
             items: items,
             total: total,
             status: status,
-            amountPaid: amountPaid,
+            amountPaid: status === 'Paid' ? total : 0,
             date: new Date(document.getElementById('order-date').value).toISOString()
         };
 
@@ -802,7 +779,7 @@ document.addEventListener('DOMContentLoaded', () => {
             orderId: orderId,
             amount: amount,
             reference: document.getElementById('payment-reference').value,
-            date: new Date().toISOString()
+            date: new Date(document.getElementById('payment-date').value).toISOString()
         };
 
         // Add payment
@@ -843,7 +820,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (target.classList.contains('edit')) {
             handleEdit(id, type);
         } else if (target.classList.contains('delete')) {
-            if (confirm(`Are you sure you want to delete this ${type}?`)) {
+            if (confirm(t('confirm_delete', { type }))) {
                 await deleteDoc(doc(db, `users/${currentUser.uid}/${type}s`, id));
                 await initApp();
             }
@@ -851,14 +828,13 @@ document.addEventListener('DOMContentLoaded', () => {
              const order = orders.find(o => o.id === id);
              paymentForm.reset();
              document.getElementById('payment-order-id').value = id;
-             // Disable order select
              const paymentOrderSelect = document.getElementById('payment-order');
              paymentOrderSelect.innerHTML = `<option value="${id}">Order #${id.substring(0,5)}</option>`;
              paymentOrderSelect.disabled = true;
 
              const remaining = order.total - (order.amountPaid || 0);
              document.getElementById('payment-amount').value = remaining.toFixed(2);
-             document.getElementById('payment-modal-title').textContent = 'Register Payment';
+             document.getElementById('payment-modal-title').textContent = t('pay');
              openModal('payment-modal');
         }
     });
@@ -954,9 +930,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, {type: 'array'});
 
-            if (confirm("This will overwrite existing data. Are you sure?")) {
+            if (confirm(t('confirm_restore'))) {
                 await restoreDataFromWorkbook(workbook);
-                alert("Data restored successfully!");
+                alert(t('restore_success'));
                 await initApp();
             }
         };
@@ -1162,22 +1138,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderPendingOrders(allOrders) {
-        const pendingPaymentsTableBody = document.getElementById('pending-payments-table-body');
-        if (!pendingPaymentsTableBody) return;
-
-        const pending = allOrders.filter(o => o.status !== 'Paid' && o.total > (o.amountPaid || 0));
+        const pending = allOrders.filter(o => o.status !== 'Paid');
         const totalPendingAmount = pending.reduce((sum, o) => sum + (o.total - (o.amountPaid || 0)), 0);
 
         // Update the card title with the total
-        const pendingPaymentsCard = pendingPaymentsTableBody.closest('.card');
-        if (pendingPaymentsCard) {
-            pendingPaymentsCard.querySelector('h3').textContent = `${t('pending_payments')} ($${totalPendingAmount.toFixed(2)})`;
-        }
+        const pendingPaymentsCard = document.querySelector('#pending-orders-list').closest('.card');
+        pendingPaymentsCard.querySelector('h3').textContent = `${t('pending_payments')} ($${totalPendingAmount.toFixed(2)})`;
 
-
-        pendingPaymentsTableBody.innerHTML = '';
+        pendingOrdersList.innerHTML = '';
         if (pending.length === 0) {
-            pendingPaymentsTableBody.innerHTML = `<tr><td colspan="3">${t('no_pending_payments')}</td></tr>`;
+            pendingOrdersList.innerHTML = `<li>${t('no_pending_payments')}</li>`;
             return;
         }
 
@@ -1189,14 +1159,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const remaining = o.total - (o.amountPaid || 0);
             const orderDate = new Date(o.date);
             const daysOld = Math.floor((new Date() - orderDate) / (1000 * 60 * 60 * 24));
-            const row = `
-                <tr>
-                    <td>${customerName}</td>
-                    <td>$${remaining.toFixed(2)}</td>
-                    <td>${daysOld} ${t('days_old')}</td>
-                </tr>
-            `;
-            pendingPaymentsTableBody.innerHTML += row;
+            const li = `<li>${customerName} - $${remaining.toFixed(2)} (${daysOld} ${t('days_old')})</li>`;
+            pendingOrdersList.innerHTML += li;
         });
     }
 
