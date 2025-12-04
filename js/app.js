@@ -469,6 +469,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${orderId}</td>
                     <td>$${!isNaN(amount) ? amount.toFixed(2) : '0.00'}</td>
                     <td>${p.reference || ''}</td>
+                    <td>
+                        <button class="action-btn edit" data-id="${p.id}" data-type="payment" title="${t('edit')}"><i class="fas fa-edit"></i></button>
+                        <button class="action-btn delete" data-id="${p.id}" data-type="payment" title="${t('delete')}"><i class="fas fa-trash"></i></button>
+                    </td>
                 </tr>
             `;
             paymentsTableBody.innerHTML += row;
@@ -704,8 +708,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = document.getElementById('product-id').value;
         const data = {
             description: document.getElementById('product-description').value,
-            retailPrice: parseFloat(document.getElementById('product-retail-price').value),
-            wholesalePrice: parseFloat(document.getElementById('product-wholesale-price').value),
+            retailPrice: parseFloat(document.getElementById('product-retail-price').value) || 0,
+            wholesalePrice: parseFloat(document.getElementById('product-wholesale-price').value) || 0,
         };
 
         await saveOrUpdate('products', id, data);
@@ -767,13 +771,19 @@ document.addEventListener('DOMContentLoaded', () => {
             amountPaid = parseFloat(amountPaidInput.value) || 0;
         }
 
+        const dateParts = document.getElementById('order-date').value.split('-');
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
+        const day = parseInt(dateParts[2], 10);
+        const localDate = new Date(year, month, day);
+
         const data = {
             customerId: document.getElementById('order-customer-id').value,
             items: items,
             total: total,
             status: status,
             amountPaid: amountPaid,
-            date: new Date(document.getElementById('order-date').value).toISOString()
+            date: localDate.toISOString()
         };
 
         const orderId = await saveOrUpdate('orders', id, data);
@@ -798,11 +808,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const orderId = document.getElementById('payment-order-id').value || document.getElementById('payment-order').value;
         const amount = parseFloat(document.getElementById('payment-amount').value);
 
+        const dateParts = document.getElementById('payment-date').value.split('-');
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
+        const day = parseInt(dateParts[2], 10);
+        const localDate = new Date(year, month, day);
+
         const data = {
             orderId: orderId,
             amount: amount,
             reference: document.getElementById('payment-reference').value,
-            date: new Date().toISOString()
+            date: localDate.toISOString()
         };
 
         // Add payment
@@ -1194,6 +1210,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${customerName}</td>
                     <td>$${remaining.toFixed(2)}</td>
                     <td>${daysOld} ${t('days_old')}</td>
+                    <td>
+                        <button class="action-btn whatsapp-btn"
+                                data-customer-id="${o.customerId}"
+                                data-customer-name="${customerName}"
+                                data-amount="${remaining.toFixed(2)}"
+                                data-days-old="${daysOld}"
+                                title="Send WhatsApp Reminder">
+                            <i class="fab fa-whatsapp"></i>
+                        </button>
+                    </td>
                 </tr>
             `;
             pendingPaymentsTableBody.innerHTML += row;

@@ -17,5 +17,6 @@
     "confirm_restore": "Esto sobrescribirá los datos existentes. ¿Estás seguro?", "restore_success": "¡Datos restaurados con éxito!",
     "days_old": "días", "customer_ranking": "Ranking de Clientes", "sales": "Ventas",
     "new_customer_short": "Nuevo", "all_customers": "Todos los Clientes", "all_months": "Todos los Meses", "all_years": "Todos los Años",
-    "order_items": "Ítems del Pedido", "add_item": "Añadir Producto", "search_orders": "Buscar Pedidos..."
+    "order_items": "Ítems del Pedido", "add_item": "Añadir Producto", "search_orders": "Buscar Pedidos...",
+    "whatsapp": "Enviar WhatsApp"
 }
