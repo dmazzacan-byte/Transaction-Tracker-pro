@@ -280,9 +280,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         filteredProducts.forEach(p => {
             const row = `
                 <tr>
-                    <td>${p.description}</td>
-                    <td>$${p.retailPrice?.toFixed(2)}</td>
-                    <td>$${p.wholesalePrice?.toFixed(2)}</td>
+                    <td>${p.description || 'N/A'}</td>
+                    <td>$${retailPrice}</td>
+                    <td>$${wholesalePrice}</td>
                     <td>
                         <button class="action-btn edit" data-id="${p.id}" data-type="product" title="${t('edit')}"><i class="fas fa-edit"></i></button>
                         <button class="action-btn delete" data-id="${p.id}" data-type="product" title="${t('delete')}"><i class="fas fa-trash"></i></button>
@@ -307,7 +307,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const row = `
                 <tr>
-                    <td>${c.name}</td>
+                    <td>${c.name || 'N/A'}</td>
                     <td>${c.phone || ''}</td>
                     <td>$${monthlyVolume.toFixed(2)}</td>
                     <td>$${historicalVolume.toFixed(2)}</td>
@@ -379,16 +379,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderPayments() {
         paymentsTableBody.innerHTML = '';
-        payments.sort((a, b) => new Date(b.date) - new Date(a.date));
-        payments.forEach(p => {
-            const order = orders.find(o => o.id === p.orderId);
-            const customer = customers.find(c => c.id === order?.customerId)?.name || 'N/A';
+        if (!payments) return;
+
+        const validPayments = payments.filter(p => {
+            if (!p || !p.date) return false;
+            const paymentDate = new Date(p.date);
+            return !isNaN(paymentDate.getTime());
+        });
+
+        validPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        validPayments.forEach(p => {
+            const order = orders.find(o => o && o.id === p.orderId);
+            const customer = customers.find(c => c && c.id === order?.customerId)?.name || 'N/A';
+            const orderId = order ? `Order #${order.id.substring(0, 5)}...` : 'N/A';
+            const amount = parseFloat(p.amount);
+
             const row = `
                 <tr>
                     <td>${new Date(p.date).toLocaleDateString()}</td>
                     <td>${customer}</td>
-                    <td>Order #${order?.id.substring(0, 5)}...</td>
-                    <td>$${p.amount.toFixed(2)}</td>
+                    <td>${orderId}</td>
+                    <td>$${!isNaN(amount) ? amount.toFixed(2) : '0.00'}</td>
                     <td>${p.reference || ''}</td>
                 </tr>
             `;
@@ -961,8 +973,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     function setupDashboard() {
         populateDateFilters();
         updateDashboard();
-        dashboardMonthSelect.addEventListener('change', updateDashboard);
-        dashboardYearSelect.addEventListener('change', updateDashboard);
+        if (!listenersAttached) {
+            dashboardMonthSelect.addEventListener('change', updateDashboard);
+            dashboardYearSelect.addEventListener('change', updateDashboard);
+        }
     }
 
     function populateDateFilters() {

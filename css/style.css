@@ -84,6 +84,10 @@ th { font-weight: 500; color: var(--text-color-muted); }
     gap: 2rem;
 }
 
+.dashboard-grid .card:first-child {
+    grid-column: 1 / -1; /* Span all columns */
+}
+
 .card {
     background-color: var(--surface-color);
     padding: 1.5rem;
