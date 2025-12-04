@@ -59,11 +59,25 @@
                     </div>
                 </div>
                 <div class="dashboard-grid">
-                    <div class="card">
+                    <div id="daily-sales-card" class="card">
                         <h3>Daily Sales</h3>
-                        <canvas id="sales-chart"></canvas>
+                        <div class="chart-container aspect-ratio-2-1">
+                            <canvas id="sales-chart"></canvas>
+                        </div>
                     </div>
-                    <div class="card">
+                    <div id="product-sales-card" class="card">
+                        <h3 data-i18n-key="sales_by_product">Sales by Product</h3>
+                        <div class="chart-container aspect-ratio-1-1">
+                            <canvas id="product-sales-chart"></canvas>
+                        </div>
+                    </div>
+                    <div id="customer-ranking-card" class="card">
+                        <h3 data-i18n-key="customer_ranking">Customer Ranking</h3>
+                        <div class="chart-container aspect-ratio-1-2">
+                            <canvas id="customer-ranking-chart"></canvas>
+                        </div>
+                    </div>
+                    <div id="pending-debts-card" class="card">
                         <h3>Pending Payments</h3>
                         <div class="table-responsive">
                             <table class="table">
@@ -79,14 +93,6 @@
                                 </tbody>
                             </table>
                         </div>
-                    </div>
-                    <div class="card">
-                        <h3 data-i18n-key="sales_by_product">Sales by Product</h3>
-                        <canvas id="product-sales-chart"></canvas>
-                    </div>
-                    <div class="card">
-                        <h3 data-i18n-key="customer_ranking">Customer Ranking</h3>
-                        <canvas id="customer-ranking-chart"></canvas>
                     </div>
                 </div>
             </div>
@@ -151,8 +157,13 @@
 
             <div id="payments" class="tab-content">
                  <div class="header">
-                    <h1>Payments</h1>
-                    <button id="add-payment-btn" class="btn-primary"><i class="fas fa-plus"></i> New Payment</button>
+                    <h1 data-i18n-key="payments">Payments</h1>
+                     <div class="filters">
+                        <label data-i18n-key="filter_by">Filter by:</label>
+                        <select id="payments-customer-filter"></select>
+                        <input type="date" id="payments-date-filter">
+                    </div>
+                    <button id="add-payment-btn" class="btn-primary"><i class="fas fa-plus"></i> <span data-i18n-key="new_payment">New Payment</span></button>
                 </div>
                 <div class="table-container">
                     <table>
@@ -163,6 +174,7 @@
                                 <th>Order</th>
                                 <th>Amount</th>
                                 <th>Reference</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="payments-table-body"></tbody>

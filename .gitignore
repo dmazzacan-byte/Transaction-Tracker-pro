@@ -1,2 +1,2 @@
-# Log files
-*.log
+node_modules/
+serve.log
