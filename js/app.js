@@ -184,17 +184,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
      function renderCustomers() {
         customersTableBody.innerHTML = '';
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
         customers.forEach(c => {
-            // Basic calculations - can be expanded
-            const pendingAmount = orders.filter(o => o.customerId === c.id && o.status !== 'Paid')
-                                       .reduce((sum, o) => sum + (o.total - (o.amountPaid || 0)), 0);
+            const customerOrders = orders.filter(o => o.customerId === c.id);
+
+            const historicalVolume = customerOrders.reduce((sum, o) => sum + o.total, 0);
+
+            const monthlyVolume = customerOrders
+                .filter(o => {
+                    const orderDate = new Date(o.date);
+                    return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
+                })
+                .reduce((sum, o) => sum + o.total, 0);
+
+            const pendingAmount = customerOrders
+                .filter(o => o.status !== 'Paid')
+                .reduce((sum, o) => sum + (o.total - (o.amountPaid || 0)), 0);
 
             const row = `
                 <tr>
                     <td>${c.name}</td>
                     <td>${c.phone || ''}</td>
-                    <td>N/A</td> <!-- Monthly Volume requires more complex calculation -->
-                    <td>N/A</td> <!-- Historical Volume requires more complex calculation -->
+                    <td>$${monthlyVolume.toFixed(2)}</td>
+                    <td>$${historicalVolume.toFixed(2)}</td>
                     <td>$${pendingAmount.toFixed(2)}</td>
                     <td>
                         <button class="action-btn edit" data-id="${c.id}" data-type="customer" title="Edit"><i class="fas fa-edit"></i></button>
@@ -582,6 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderSalesChart(filteredOrders, month, year);
         renderProductSalesChart(filteredOrders);
         renderPendingOrders(orders); // Show all pending, not just this month's
+        renderCustomerRankingChart(filteredOrders);
     }
 
     function renderSalesChart(filteredOrders, month, year) {
@@ -635,6 +651,34 @@ document.addEventListener('DOMContentLoaded', () => {
              },
              options: { responsive: true }
          });
+    }
+
+    function renderCustomerRankingChart(filteredOrders) {
+        const customerSales = {};
+        filteredOrders.forEach(o => {
+            const customerName = customers.find(c => c.id === o.customerId)?.name || 'Unknown';
+            customerSales[customerName] = (customerSales[customerName] || 0) + o.total;
+        });
+
+        const sortedCustomers = Object.entries(customerSales).sort(([,a],[,b]) => b-a);
+        const labels = sortedCustomers.map(([name]) => name);
+        const data = sortedCustomers.map(([,total]) => total);
+
+        const ctx = document.getElementById('customer-ranking-chart').getContext('2d');
+        let customerRankingChart;
+        if (customerRankingChart) customerRankingChart.destroy();
+        customerRankingChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Sales',
+                    data: data,
+                    backgroundColor: '#28a745',
+                }]
+            },
+            options: { responsive: true, indexAxis: 'y', maintainAspectRatio: false }
+        });
     }
 
     function renderPendingOrders(allOrders) {

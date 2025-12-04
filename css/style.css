@@ -389,3 +389,13 @@ th {
 .hidden {
     display: none !important;
 }
+
+.dashboard-grid .card:nth-child(1),
+.dashboard-grid .card:nth-child(2) {
+    grid-column: span 1;
+}
+
+.dashboard-grid .card:nth-child(3),
+.dashboard-grid .card:nth-child(4) {
+    grid-column: span 2;
+}
