@@ -704,8 +704,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = document.getElementById('product-id').value;
         const data = {
             description: document.getElementById('product-description').value,
-            retailPrice: parseFloat(document.getElementById('product-retail-price').value),
-            wholesalePrice: parseFloat(document.getElementById('product-wholesale-price').value),
+            retailPrice: parseFloat(document.getElementById('product-retail-price').value) || 0,
+            wholesalePrice: parseFloat(document.getElementById('product-wholesale-price').value) || 0,
         };
 
         await saveOrUpdate('products', id, data);
