@@ -70,8 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Dashboard
     const dashboardMonthSelect = document.getElementById('dashboard-month');
     const dashboardYearSelect = document.getElementById('dashboard-year');
-    const pendingOrdersList = document.getElementById('pending-orders-list');
-    let salesChart, productSalesChart;
+    let salesChart, productSalesChart, customerRankingChart;
 
     // --- Authentication ---
     onAuthStateChanged(auth, (user) => {
@@ -102,7 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
         createUserWithEmailAndPassword(auth, email, password)
              .then(userCredential => {
                 const user = userCredential.user;
-                // Add user to the 'users' collection
                 addDoc(collection(db, `users/${user.uid}/users`), {
                     email: user.email,
                     name: user.email.split('@')[0]
@@ -127,6 +125,8 @@ document.addEventListener('DOMContentLoaded', () => {
         await fetchData();
         renderAll();
         setupDashboard();
+        setupPaymentFilters();
+        document.body.dataset.ready = 'true';
     }
 
     // --- Data Fetching ---
@@ -185,16 +185,14 @@ document.addEventListener('DOMContentLoaded', () => {
      function renderCustomers() {
         customersTableBody.innerHTML = '';
         customers.forEach(c => {
-            // Basic calculations - can be expanded
             const pendingAmount = orders.filter(o => o.customerId === c.id && o.status !== 'Paid')
                                        .reduce((sum, o) => sum + (o.total - (o.amountPaid || 0)), 0);
-
             const row = `
                 <tr>
                     <td>${c.name}</td>
                     <td>${c.phone || ''}</td>
-                    <td>N/A</td> <!-- Monthly Volume requires more complex calculation -->
-                    <td>N/A</td> <!-- Historical Volume requires more complex calculation -->
+                    <td>N/A</td>
+                    <td>N/A</td>
                     <td>$${pendingAmount.toFixed(2)}</td>
                     <td>
                         <button class="action-btn edit" data-id="${c.id}" data-type="customer" title="Edit"><i class="fas fa-edit"></i></button>
@@ -208,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderOrders() {
         ordersTableBody.innerHTML = '';
-        orders.sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort by most recent
+        orders.sort((a, b) => new Date(b.date) - new Date(a.date));
         orders.forEach(o => {
             const customer = customers.find(c => c.id === o.customerId)?.name || 'N/A';
             const product = products.find(p => p.id === o.productId)?.description || 'N/A';
@@ -233,10 +231,30 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function renderPayments() {
+    function renderPayments(customerId, month, year) {
         paymentsTableBody.innerHTML = '';
-        payments.sort((a, b) => new Date(b.date) - new Date(a.date));
-        payments.forEach(p => {
+        if (!payments) return;
+
+        let filteredPayments = payments;
+        if (customerId) {
+            const customerOrders = orders.filter(o => o.customerId === customerId).map(o => o.id);
+            filteredPayments = filteredPayments.filter(p => customerOrders.includes(p.orderId));
+        }
+        if (month) {
+            filteredPayments = filteredPayments.filter(p => new Date(p.date).getMonth() == month);
+        }
+        if (year) {
+            filteredPayments = filteredPayments.filter(p => new Date(p.date).getFullYear() == year);
+        }
+
+        filteredPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        paymentsTableBody.innerHTML = '';
+        if (filteredPayments.length === 0) {
+            paymentsTableBody.innerHTML = `<tr><td colspan="6">No payments found.</td></tr>`;
+            return;
+        }
+        filteredPayments.forEach(p => {
             const order = orders.find(o => o.id === p.orderId);
             const customer = customers.find(c => c.id === order?.customerId)?.name || 'N/A';
             const row = `
@@ -246,6 +264,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>Order #${order?.id.substring(0, 5)}...</td>
                     <td>$${p.amount.toFixed(2)}</td>
                     <td>${p.reference || ''}</td>
+                    <td>
+                        <button class="action-btn edit" data-id="${p.id}" data-type="payment" title="Edit"><i class="fas fa-edit"></i></button>
+                        <button class="action-btn delete" data-id="${p.id}" data-type="payment" title="Delete"><i class="fas fa-trash"></i></button>
+                    </td>
                 </tr>
             `;
             paymentsTableBody.innerHTML += row;
@@ -268,7 +290,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Modals ---
     function openModal(modalId) {
         document.getElementById(modalId).classList.remove('hidden');
         modalBackdrop.classList.remove('hidden');
@@ -282,7 +303,6 @@ document.addEventListener('DOMContentLoaded', () => {
     modalBackdrop.addEventListener('click', closeModal);
     modals.forEach(m => m.querySelector('.close-btn').addEventListener('click', closeModal));
 
-    // --- Event Listeners for Add Buttons ---
     addProductBtn.addEventListener('click', () => {
         productForm.reset();
         document.getElementById('product-id').value = '';
@@ -308,13 +328,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     addPaymentBtn.addEventListener('click', () => {
         paymentForm.reset();
-        populateSelect('payment-order', orders, 'id', 'id'); // Simple display, could be improved
+        populateSelect('payment-order', orders, 'id', 'id');
         document.getElementById('payment-modal-title').textContent = 'New Payment';
         openModal('payment-modal');
     });
 
-
-    // --- Form Submissions ---
     productForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('product-id').value;
@@ -323,7 +341,6 @@ document.addEventListener('DOMContentLoaded', () => {
             retailPrice: parseFloat(document.getElementById('product-retail-price').value),
             wholesalePrice: parseFloat(document.getElementById('product-wholesale-price').value),
         };
-
         await saveOrUpdate('products', id, data);
         closeModal();
         await initApp();
@@ -348,8 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const product = products.find(p => p.id === productId);
         const quantity = parseInt(document.getElementById('order-quantity').value);
         const status = document.getElementById('order-status').value;
-        const total = product.retailPrice * quantity; // Assuming retail for now
-
+        const total = product.retailPrice * quantity;
         const data = {
             customerId: document.getElementById('order-customer').value,
             productId: productId,
@@ -359,7 +375,6 @@ document.addEventListener('DOMContentLoaded', () => {
             amountPaid: status === 'Paid' ? total : 0,
             date: new Date().toISOString()
         };
-
         await saveOrUpdate('orders', id, data);
         closeModal();
         await initApp();
@@ -367,8 +382,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
      paymentForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const id = document.getElementById('payment-id').value;
         const orderId = document.getElementById('payment-order-id').value || document.getElementById('payment-order').value;
         const amount = parseFloat(document.getElementById('payment-amount').value);
+
+        let originalAmount = 0;
+        if (id) {
+            const originalPayment = payments.find(p => p.id === id);
+            originalAmount = originalPayment ? originalPayment.amount : 0;
+        }
 
         const data = {
             orderId: orderId,
@@ -377,14 +399,13 @@ document.addEventListener('DOMContentLoaded', () => {
             date: new Date().toISOString()
         };
 
-        // Add payment
-        await addDoc(collection(db, `users/${currentUser.uid}/payments`), data);
+        await saveOrUpdate('payments', id, data);
 
-        // Update order
         const order = orders.find(o => o.id === orderId);
         if (order) {
-            const newAmountPaid = (order.amountPaid || 0) + amount;
-            const newStatus = newAmountPaid >= order.total ? 'Paid' : 'Partial';
+            const amountDifference = amount - originalAmount;
+            const newAmountPaid = (order.amountPaid || 0) + amountDifference;
+            const newStatus = newAmountPaid >= order.total ? 'Paid' : (newAmountPaid > 0 ? 'Partial' : 'Pending');
             const orderRef = doc(db, `users/${currentUser.uid}/orders`, orderId);
             await updateDoc(orderRef, { amountPaid: newAmountPaid, status: newStatus });
         }
@@ -402,18 +423,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Edit and Delete ---
     document.querySelector('.main-content').addEventListener('click', async (e) => {
         const target = e.target.closest('.action-btn');
         if (!target) return;
-
         const id = target.dataset.id;
         const type = target.dataset.type;
-
         if (target.classList.contains('edit')) {
             handleEdit(id, type);
         } else if (target.classList.contains('delete')) {
             if (confirm(`Are you sure you want to delete this ${type}?`)) {
+                if (type === 'payment') {
+                    const payment = payments.find(p => p.id === id);
+                    if(payment) {
+                        const order = orders.find(o => o.id === payment.orderId);
+                        if (order) {
+                            const newAmountPaid = (order.amountPaid || 0) - payment.amount;
+                            const newStatus = newAmountPaid >= order.total ? 'Paid' : (newAmountPaid > 0 ? 'Partial' : 'Pending');
+                            const orderRef = doc(db, `users/${currentUser.uid}/orders`, order.id);
+                            await updateDoc(orderRef, { amountPaid: newAmountPaid, status: newStatus });
+                        }
+                    }
+                }
                 await deleteDoc(doc(db, `users/${currentUser.uid}/${type}s`, id));
                 await initApp();
             }
@@ -421,11 +451,9 @@ document.addEventListener('DOMContentLoaded', () => {
              const order = orders.find(o => o.id === id);
              paymentForm.reset();
              document.getElementById('payment-order-id').value = id;
-             // Disable order select
              const paymentOrderSelect = document.getElementById('payment-order');
              paymentOrderSelect.innerHTML = `<option value="${id}">Order #${id.substring(0,5)}</option>`;
              paymentOrderSelect.disabled = true;
-
              const remaining = order.total - (order.amountPaid || 0);
              document.getElementById('payment-amount').value = remaining.toFixed(2);
              document.getElementById('payment-modal-title').textContent = 'Register Payment';
@@ -434,11 +462,34 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function handleEdit(id, type) {
-        const item = window[type+'s'].find(i => i.id === id);
-        if (!item) return;
-
+        let item;
         switch(type) {
+            case 'payment':
+                item = payments.find(i => i.id === id);
+                if (!item) return;
+                document.getElementById('payment-id').value = item.id;
+                document.getElementById('payment-date').value = new Date(item.date).toISOString().split('T')[0];
+                document.getElementById('payment-amount').value = item.amount;
+                document.getElementById('payment-reference').value = item.reference;
+
+                const order = orders.find(o => o.id === item.orderId);
+                if (!order) { alert('Error: Associated order not found.'); return; }
+                const customer = customers.find(c => c.id === order.customerId);
+                if (!customer) { alert('Error: Associated customer not found.'); return; }
+
+                populateSelect('payment-customer', customers, 'id', 'name', customer.id);
+
+                const paymentOrderSelect = document.getElementById('payment-order');
+                paymentOrderSelect.innerHTML = `<option value="${order.id}">Order of ${new Date(order.date).toLocaleDateString()}</option>`;
+                paymentOrderSelect.disabled = true;
+                document.getElementById('payment-customer').disabled = true;
+
+                document.getElementById('payment-modal-title').textContent = 'Edit Payment';
+                openModal('payment-modal');
+                break;
             case 'product':
+                 item = products.find(i => i.id === id);
+                if (!item) return;
                 document.getElementById('product-id').value = item.id;
                 document.getElementById('product-description').value = item.description;
                 document.getElementById('product-retail-price').value = item.retailPrice;
@@ -447,6 +498,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 openModal('product-modal');
                 break;
             case 'customer':
+                 item = customers.find(i => i.id === id);
+                if (!item) return;
                 document.getElementById('customer-id').value = item.id;
                 document.getElementById('customer-name').value = item.name;
                 document.getElementById('customer-phone').value = item.phone;
@@ -454,6 +507,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 openModal('customer-modal');
                 break;
             case 'order':
+                 item = orders.find(i => i.id === id);
+                if (!item) return;
                  document.getElementById('order-id').value = item.id;
                  populateSelect('order-customer', customers, 'id', 'name', item.customerId);
                  populateSelect('order-product', products, 'id', 'description', item.productId);
@@ -465,38 +520,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-
-    // --- Navigation ---
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
             const tabId = link.dataset.tab;
-
             navLinks.forEach(l => l.classList.remove('active'));
             link.classList.add('active');
-
             tabs.forEach(t => t.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
-
             if (tabId === 'dashboard') {
                 setupDashboard();
             }
         });
     });
 
-    // --- Settings - Backup/Restore ---
     backupBtn.addEventListener('click', () => {
         const wb = XLSX.utils.book_new();
         const ws_products = XLSX.utils.json_to_sheet(products.map(({id, ...rest}) => rest));
         const ws_customers = XLSX.utils.json_to_sheet(customers.map(({id, ...rest}) => rest));
         const ws_orders = XLSX.utils.json_to_sheet(orders.map(({id, ...rest}) => rest));
         const ws_payments = XLSX.utils.json_to_sheet(payments.map(({id, ...rest}) => rest));
-
         XLSX.utils.book_append_sheet(wb, ws_products, "Products");
         XLSX.utils.book_append_sheet(wb, ws_customers, "Customers");
         XLSX.utils.book_append_sheet(wb, ws_orders, "Orders");
         XLSX.utils.book_append_sheet(wb, ws_payments, "Payments");
-
         XLSX.writeFile(wb, "backup.xlsx");
     });
 
@@ -504,12 +551,10 @@ document.addEventListener('DOMContentLoaded', () => {
     restoreInput.addEventListener('change', (event) => {
         const file = event.target.files[0];
         if (!file) return;
-
         const reader = new FileReader();
         reader.onload = async (e) => {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, {type: 'array'});
-
             if (confirm("This will overwrite existing data. Are you sure?")) {
                 await restoreDataFromWorkbook(workbook);
                 alert("Data restored successfully!");
@@ -521,23 +566,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function restoreDataFromWorkbook(workbook) {
         const userId = currentUser.uid;
-        const sheetMap = {
-            "Products": "products",
-            "Customers": "customers",
-            "Orders": "orders",
-            "Payments": "payments"
-        };
-
+        const sheetMap = { "Products": "products", "Customers": "customers", "Orders": "orders", "Payments": "payments" };
         for (const sheetName in sheetMap) {
             if (workbook.Sheets[sheetName]) {
                 const collectionName = sheetMap[sheetName];
-                // Clear existing data
                 const existingDocs = await getDocs(collection(db, `users/${userId}/${collectionName}`));
                 const deleteBatch = writeBatch(db);
                 existingDocs.forEach(doc => deleteBatch.delete(doc.ref));
                 await deleteBatch.commit();
-
-                // Add new data
                 const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
                 const addBatch = writeBatch(db);
                 jsonData.forEach(item => {
@@ -557,11 +593,43 @@ document.addEventListener('DOMContentLoaded', () => {
         dashboardYearSelect.addEventListener('change', updateDashboard);
     }
 
+    function setupPaymentFilters() {
+        const paymentsCustomerFilter = document.getElementById('payments-customer-filter');
+        const paymentsMonthFilter = document.getElementById('payments-month-filter');
+        const paymentsYearFilter = document.getElementById('payments-year-filter');
+
+        populateSelect('payments-customer-filter', [{id: '', name: 'All Customers'}, ...customers], 'id', 'name');
+
+        const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        paymentsMonthFilter.innerHTML = `<option value="">All Months</option>` + months.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+        paymentsMonthFilter.value = new Date().getMonth();
+
+        const currentYear = new Date().getFullYear();
+        let yearOptions = `<option value="">All Years</option>`;
+        for (let i = currentYear; i >= currentYear - 5; i--) {
+            yearOptions += `<option value="${i}">${i}</option>`;
+        }
+        paymentsYearFilter.innerHTML = yearOptions;
+        paymentsYearFilter.value = currentYear;
+
+        const applyFilters = () => {
+            renderPayments(
+                paymentsCustomerFilter.value,
+                paymentsMonthFilter.value,
+                paymentsYearFilter.value
+            );
+        };
+        paymentsCustomerFilter.addEventListener('change', applyFilters);
+        paymentsMonthFilter.addEventListener('change', applyFilters);
+        paymentsYearFilter.addEventListener('change', applyFilters);
+
+        applyFilters();
+    }
+
     function populateDateFilters() {
         const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         const currentMonth = new Date().getMonth();
         dashboardMonthSelect.innerHTML = months.map((m, i) => `<option value="${i}" ${i === currentMonth ? 'selected' : ''}>${m}</option>`).join('');
-
         const currentYear = new Date().getFullYear();
         let yearOptions = '';
         for (let i = currentYear; i >= currentYear - 5; i--) {
@@ -573,27 +641,51 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateDashboard() {
         const month = parseInt(dashboardMonthSelect.value);
         const year = parseInt(dashboardYearSelect.value);
-
         const filteredOrders = orders.filter(o => {
             const orderDate = new Date(o.date);
             return orderDate.getMonth() === month && orderDate.getFullYear() === year;
         });
-
         renderSalesChart(filteredOrders, month, year);
         renderProductSalesChart(filteredOrders);
-        renderPendingOrders(orders); // Show all pending, not just this month's
+        renderPendingOrders(orders);
+        renderCustomerRankingChart(filteredOrders);
+    }
+
+    function renderCustomerRankingChart(filteredOrders) {
+        const customerSales = {};
+        filteredOrders.forEach(o => {
+            const customerName = customers.find(c => c.id === o.customerId)?.name || 'Unknown';
+            customerSales[customerName] = (customerSales[customerName] || 0) + o.total;
+        });
+
+        const sortedCustomers = Object.entries(customerSales).sort(([,a],[,b]) => b-a);
+        const labels = sortedCustomers.map(([name]) => name);
+        const data = sortedCustomers.map(([,total]) => total);
+
+        const ctx = document.getElementById('customer-ranking-chart').getContext('2d');
+        if (customerRankingChart) customerRankingChart.destroy();
+        customerRankingChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Sales',
+                    data: data,
+                    backgroundColor: '#28a745',
+                }]
+            },
+            options: { responsive: true, indexAxis: 'y' }
+        });
     }
 
     function renderSalesChart(filteredOrders, month, year) {
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         const labels = Array.from({ length: daysInMonth }, (_, i) => i + 1);
         const salesData = new Array(daysInMonth).fill(0);
-
         filteredOrders.forEach(o => {
             const day = new Date(o.date).getDate();
             salesData[day - 1] += o.total;
         });
-
         const ctx = document.getElementById('sales-chart').getContext('2d');
         if (salesChart) salesChart.destroy();
         salesChart = new Chart(ctx, {
@@ -618,10 +710,8 @@ document.addEventListener('DOMContentLoaded', () => {
              const productName = products.find(p => p.id === o.productId)?.description || 'Unknown';
              productSales[productName] = (productSales[productName] || 0) + o.total;
          });
-
          const labels = Object.keys(productSales);
          const data = Object.values(productSales);
-
          const ctx = document.getElementById('product-sales-chart').getContext('2d');
          if (productSalesChart) productSalesChart.destroy();
          productSalesChart = new Chart(ctx, {
@@ -638,21 +728,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderPendingOrders(allOrders) {
-        pendingOrdersList.innerHTML = '';
-        const pending = allOrders.filter(o => o.status !== 'Paid').slice(0, 5); // Show top 5
+        const pendingPaymentsTableBody = document.getElementById('pending-payments-table-body');
+        if (!pendingPaymentsTableBody) return;
+
+        pendingPaymentsTableBody.innerHTML = '';
+        const pending = allOrders.filter(o => o.status !== 'Paid');
         if (pending.length === 0) {
-            pendingOrdersList.innerHTML = '<li>No pending payments.</li>';
+            pendingPaymentsTableBody.innerHTML = `<tr><td colspan="3">No pending payments.</td></tr>`;
             return;
         }
+
+        pending.sort((a, b) => new Date(a.date) - new Date(b.date));
+
         pending.forEach(o => {
             const customerName = customers.find(c => c.id === o.customerId)?.name || 'N/A';
             const remaining = o.total - (o.amountPaid || 0);
-            const li = `<li>${customerName} - $${remaining.toFixed(2)} remaining</li>`;
-            pendingOrdersList.innerHTML += li;
+            const orderDate = new Date(o.date);
+            const daysOld = Math.floor((new Date() - orderDate) / (1000 * 60 * 60 * 24));
+            const row = `
+                <tr>
+                    <td>${customerName}</td>
+                    <td>$${remaining.toFixed(2)}</td>
+                    <td>${daysOld} days</td>
+                </tr>
+            `;
+            pendingPaymentsTableBody.innerHTML += row;
         });
     }
 
-    // --- Helpers ---
     function populateSelect(selectId, data, valueKey, textKey, selectedValue) {
         const select = document.getElementById(selectId);
         select.innerHTML = '<option value="">Select...</option>';
