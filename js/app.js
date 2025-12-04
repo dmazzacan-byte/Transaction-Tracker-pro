@@ -1,11 +1,10 @@
-import { auth, db } from './firebase.js';
 import {
+    auth,
+    db,
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     onAuthStateChanged,
-    signOut
-} from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-import {
+    signOut,
     collection,
     doc,
     addDoc,
@@ -15,8 +14,7 @@ import {
     query,
     where,
     writeBatch
-} from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
-
+} from './firebase.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- State ---
@@ -66,6 +64,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const ordersCustomerFilter = document.getElementById('orders-customer-filter');
     const ordersMonthFilter = document.getElementById('orders-month-filter');
     const ordersYearFilter = document.getElementById('orders-year-filter');
+    const paymentsCustomerFilter = document.getElementById('payments-customer-filter');
+    const paymentsDateFilter = document.getElementById('payments-date-filter');
+
 
     // Forms
     const productForm = document.getElementById('product-form');
@@ -218,12 +219,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 ordersYearFilter.value
             );
         };
-        if (!listenersAttached) {
-            ordersCustomerFilter.addEventListener('change', applyFilters);
-            ordersMonthFilter.addEventListener('change', applyFilters);
-            ordersYearFilter.addEventListener('change', applyFilters);
-            ordersSearch.addEventListener('input', applyFilters);
-        }
+        ordersCustomerFilter.addEventListener('change', applyFilters);
+        ordersMonthFilter.addEventListener('change', applyFilters);
+        ordersYearFilter.addEventListener('change', applyFilters);
+        ordersSearch.addEventListener('input', applyFilters);
+
+        applyFilters(); // Initial render
+    }
+
+    function setupPaymentFilters() {
+        populateSelect('payments-customer-filter', [{id: '', name: t('all_customers')}, ...customers], 'id', 'name');
+        paymentsDateFilter.value = ''; // Clear date filter on setup
+
+        const applyFilters = () => {
+            renderPayments(
+                paymentsCustomerFilter.value,
+                paymentsDateFilter.value
+            );
+        };
+
+        paymentsCustomerFilter.addEventListener('change', applyFilters);
+        paymentsDateFilter.addEventListener('change', applyFilters);
+
         applyFilters(); // Initial render
     }
 
@@ -233,13 +250,19 @@ document.addEventListener('DOMContentLoaded', () => {
         await setLanguage('es'); // Default to Spanish
         await fetchData();
         renderAll();
-        setupDashboard();
-        setupOrderFilters();
+
         if (!listenersAttached) {
+            setupOrderFilters();
+            setupPaymentFilters();
             customersSearch.addEventListener('input', () => renderCustomers(customersSearch.value));
             productsSearch.addEventListener('input', () => renderProducts(productsSearch.value));
+            dashboardMonthSelect.addEventListener('change', updateDashboard);
+            dashboardYearSelect.addEventListener('change', updateDashboard);
             listenersAttached = true;
         }
+
+        // Always update the dashboard with fresh data
+        setupDashboard();
 
         translateUI();
         document.body.dataset.ready = 'true';
@@ -292,8 +315,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderAll() {
         renderProducts();
         renderCustomers();
-        renderOrders();
-        renderPayments();
         renderUsers();
     }
 
@@ -444,19 +465,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function renderPayments() {
+    function renderPayments(customerId, date) {
         paymentsTableBody.innerHTML = '';
         if (!payments) return;
 
-        const validPayments = payments.filter(p => {
+        let filteredPayments = payments.filter(p => {
             if (!p || !p.date) return false;
             const paymentDate = new Date(p.date);
             return !isNaN(paymentDate.getTime());
         });
 
-        validPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
+        // Apply customer filter
+        if (customerId) {
+            filteredPayments = filteredPayments.filter(p => {
+                const order = orders.find(o => o.id === p.orderId);
+                return order && order.customerId === customerId;
+            });
+        }
 
-        validPayments.forEach(p => {
+        // Apply date filter
+        if (date) {
+            filteredPayments = filteredPayments.filter(p => {
+                const paymentDate = new Date(p.date).toISOString().split('T')[0];
+                return paymentDate === date;
+            });
+        }
+
+        filteredPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        filteredPayments.forEach(p => {
             const order = orders.find(o => o && o.id === p.orderId);
             const customer = customers.find(c => c && c.id === order?.customerId)?.name || 'N/A';
             const orderId = order ? `Order #${order.id.substring(0, 5)}...` : 'N/A';
@@ -469,11 +506,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${orderId}</td>
                     <td>$${!isNaN(amount) ? amount.toFixed(2) : '0.00'}</td>
                     <td>${p.reference || ''}</td>
+                    <td>
+                        <button class="action-btn edit" data-id="${p.id}" data-type="payment" title="${t('edit')}"><i class="fas fa-edit"></i></button>
+                        <button class="action-btn delete" data-id="${p.id}" data-type="payment" title="${t('delete')}"><i class="fas fa-trash"></i></button>
+                    </td>
                 </tr>
             `;
             paymentsTableBody.innerHTML += row;
         });
     }
+
 
     function renderUsers() {
         usersTableBody.innerHTML = '';
@@ -564,6 +606,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     addPaymentBtn.addEventListener('click', () => {
         paymentForm.reset();
+        document.getElementById('payment-id').value = '';
         document.getElementById('payment-date').value = new Date().toISOString().split('T')[0];
 
         // Populate customer dropdown
@@ -709,8 +752,8 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         await saveOrUpdate('products', id, data);
-        closeModal();
         await initApp();
+        closeModal();
     });
 
     customerForm.addEventListener('submit', async (e) => {
@@ -732,9 +775,9 @@ document.addEventListener('DOMContentLoaded', () => {
             onModalClose = null; // Clear callback
         } else {
             // Standard behavior when not opened from another modal
+            await initApp(); // Fetch all data to ensure consistency
             closeModal();
         }
-        await renderCustomers(); // Re-render customer list in the background
     });
 
     orderForm.addEventListener('submit', async (e) => {
@@ -789,36 +832,38 @@ document.addEventListener('DOMContentLoaded', () => {
             await addDoc(collection(db, `users/${currentUser.uid}/payments`), paymentData);
         }
 
-        closeModal();
         await initApp();
+        closeModal();
     });
 
      paymentForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const orderId = document.getElementById('payment-order-id').value || document.getElementById('payment-order').value;
-        const amount = parseFloat(document.getElementById('payment-amount').value);
+        const id = document.getElementById('payment-id').value;
+        const orderId = document.getElementById('payment-order').value;
+        const newAmount = parseFloat(document.getElementById('payment-amount').value);
+        const originalPayment = id ? payments.find(p => p.id === id) : null;
+        const originalAmount = originalPayment ? originalPayment.amount : 0;
 
         const data = {
             orderId: orderId,
-            amount: amount,
+            amount: newAmount,
             reference: document.getElementById('payment-reference').value,
-            date: new Date().toISOString()
+            date: new Date(document.getElementById('payment-date').value).toISOString()
         };
 
-        // Add payment
-        await addDoc(collection(db, `users/${currentUser.uid}/payments`), data);
+        await saveOrUpdate('payments', id, data);
 
-        // Update order
         const order = orders.find(o => o.id === orderId);
         if (order) {
-            const newAmountPaid = (order.amountPaid || 0) + amount;
+            const amountDifference = newAmount - originalAmount;
+            const newAmountPaid = (order.amountPaid || 0) + amountDifference;
             const newStatus = newAmountPaid >= order.total ? 'Paid' : 'Partial';
             const orderRef = doc(db, `users/${currentUser.uid}/orders`, orderId);
             await updateDoc(orderRef, { amountPaid: newAmountPaid, status: newStatus });
         }
 
-        closeModal();
         await initApp();
+        closeModal();
     });
 
     async function saveOrUpdate(collectionName, id, data) {
@@ -844,21 +889,51 @@ document.addEventListener('DOMContentLoaded', () => {
             handleEdit(id, type);
         } else if (target.classList.contains('delete')) {
             if (confirm(`Are you sure you want to delete this ${type}?`)) {
+                 if (type === 'payment') {
+                    const paymentToDelete = payments.find(p => p.id === id);
+                    if (paymentToDelete) {
+                        const order = orders.find(o => o.id === paymentToDelete.orderId);
+                        if (order) {
+                            const newAmountPaid = (order.amountPaid || 0) - paymentToDelete.amount;
+                            const newStatus = newAmountPaid <= 0 ? 'Pending' : (newAmountPaid >= order.total ? 'Paid' : 'Partial');
+                            const orderRef = doc(db, `users/${currentUser.uid}/orders`, order.id);
+                            await updateDoc(orderRef, { amountPaid: newAmountPaid, status: newStatus });
+                        }
+                    }
+                }
                 await deleteDoc(doc(db, `users/${currentUser.uid}/${type}s`, id));
                 await initApp();
+            }
+        } else if (target.classList.contains('whatsapp-btn')) {
+            const customerId = target.dataset.customerId;
+            const customerName = target.dataset.customerName;
+            const amount = target.dataset.amount;
+            const customer = customers.find(c => c.id === customerId);
+
+            if (customer && customer.phone) {
+                const message = encodeURIComponent(`Hola ${customerName}, te recordamos de tu pago pendiente de $${amount}. ¡Gracias!`);
+                const whatsappUrl = `https://wa.me/${customer.phone}?text=${message}`;
+                window.open(whatsappUrl, '_blank');
+            } else {
+                alert('No se encontró el número de teléfono de este cliente.');
             }
         } else if (target.classList.contains('pay')) {
              const order = orders.find(o => o.id === id);
              paymentForm.reset();
+             document.getElementById('payment-id').value = '';
              document.getElementById('payment-order-id').value = id;
-             // Disable order select
+
+             const paymentCustomerSelect = document.getElementById('payment-customer');
+             populateSelect('payment-customer', customers, 'id', 'name', order.customerId);
+             paymentCustomerSelect.disabled = true;
+
              const paymentOrderSelect = document.getElementById('payment-order');
              paymentOrderSelect.innerHTML = `<option value="${id}">Order #${id.substring(0,5)}</option>`;
              paymentOrderSelect.disabled = true;
 
              const remaining = order.total - (order.amountPaid || 0);
              document.getElementById('payment-amount').value = remaining.toFixed(2);
-             document.getElementById('payment-modal-title').textContent = 'Register Payment';
+             document.getElementById('payment-modal-title').textContent = t('register_payment');
              openModal('payment-modal');
         }
     });
@@ -905,6 +980,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('order-status').value = item.status;
                 document.getElementById('order-modal-title').textContent = t('edit_order');
                 openModal('order-modal');
+                break;
+            case 'payment':
+                item = payments.find(i => i.id === id);
+                if (!item) return;
+
+                document.getElementById('payment-id').value = item.id;
+                document.getElementById('payment-date').value = new Date(item.date).toISOString().split('T')[0];
+                document.getElementById('payment-amount').value = item.amount;
+                document.getElementById('payment-reference').value = item.reference;
+
+                const order = orders.find(o => o.id === item.orderId);
+                if (order) {
+                    const paymentCustomerSelect = document.getElementById('payment-customer');
+                    populateSelect('payment-customer', customers, 'id', 'name', order.customerId);
+                    paymentCustomerSelect.disabled = true;
+
+                    const paymentOrderSelect = document.getElementById('payment-order');
+                    paymentOrderSelect.innerHTML = `<option value="${order.id}">Order #${order.id.substring(0,5)}...</option>`;
+                    paymentOrderSelect.disabled = true;
+                }
+
+                document.getElementById('payment-modal-title').textContent = t('edit_payment');
+                openModal('payment-modal');
                 break;
         }
     }
@@ -997,10 +1095,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupDashboard() {
         populateDateFilters();
         updateDashboard();
-        if (!listenersAttached) {
-            dashboardMonthSelect.addEventListener('change', updateDashboard);
-            dashboardYearSelect.addEventListener('change', updateDashboard);
-        }
     }
 
     function populateDateFilters() {
@@ -1056,7 +1150,13 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 indexAxis: 'y', // Horizontal bars
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
             }
         });
     }
@@ -1099,6 +1199,7 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 interaction: {
                     mode: 'index',
                     intersect: false,
@@ -1144,21 +1245,63 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const labels = Object.keys(productSales);
-         const data = Object.values(productSales);
+        const data = Object.values(productSales);
+        const totalSales = data.reduce((sum, value) => sum + value, 0);
 
-         const ctx = document.getElementById('product-sales-chart').getContext('2d');
-         if (productSalesChart) productSalesChart.destroy();
-         productSalesChart = new Chart(ctx, {
-             type: 'pie',
-             data: {
-                 labels: labels,
-                 datasets: [{
-                     data: data,
-                      backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6c757d'],
-                 }]
-             },
-             options: { responsive: true }
-         });
+        // Find the index of the largest slice to "explode" it
+        const maxValue = Math.max(...data);
+        const maxIndex = data.indexOf(maxValue);
+        const offset = new Array(data.length).fill(0);
+        if (maxIndex !== -1) {
+            offset[maxIndex] = 20; // Explode by 20 pixels
+        }
+
+        const ctx = document.getElementById('product-sales-chart').getContext('2d');
+        if (productSalesChart) productSalesChart.destroy();
+
+        // Register the datalabels plugin if it exists
+        if (window.ChartDataLabels) {
+            Chart.register(window.ChartDataLabels);
+        }
+
+        productSalesChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6c757d'],
+                    offset: offset,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: false // Disable tooltips
+                    },
+                    datalabels: {
+                        formatter: (value, context) => {
+                            const label = context.chart.data.labels[context.dataIndex];
+                            const percentage = totalSales > 0 ? (value / totalSales * 100).toFixed(0) + '%' : '0%';
+                            return `${label}\n${percentage}`;
+                        },
+                        color: '#fff',
+                        textAlign: 'center',
+                        font: {
+                            weight: 'bold'
+                        },
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        borderRadius: 4,
+                        padding: 6
+                    }
+                }
+            }
+        });
     }
 
     function renderPendingOrders(allOrders) {
@@ -1185,7 +1328,8 @@ document.addEventListener('DOMContentLoaded', () => {
         pending.sort((a, b) => new Date(a.date) - new Date(b.date));
 
         pending.forEach(o => {
-            const customerName = customers.find(c => c.id === o.customerId)?.name || 'N/A';
+            const customer = customers.find(c => c.id === o.customerId);
+            const customerName = customer?.name || 'N/A';
             const remaining = o.total - (o.amountPaid || 0);
             const orderDate = new Date(o.date);
             const daysOld = Math.floor((new Date() - orderDate) / (1000 * 60 * 60 * 24));
@@ -1194,6 +1338,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${customerName}</td>
                     <td>$${remaining.toFixed(2)}</td>
                     <td>${daysOld} ${t('days_old')}</td>
+                    <td>
+                        <button class="action-btn whatsapp-btn"
+                                data-customer-id="${customer?.id}"
+                                data-customer-name="${customerName}"
+                                data-amount="${remaining.toFixed(2)}"
+                                title="Send WhatsApp Reminder">
+                            <i class="fab fa-whatsapp"></i>
+                        </button>
+                    </td>
                 </tr>
             `;
             pendingPaymentsTableBody.innerHTML += row;
@@ -1203,7 +1356,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Helpers ---
     function populateSelect(selectId, data, valueKey, textKey, selectedValue) {
         const select = document.getElementById(selectId);
-        select.innerHTML = '<option value="">Select...</option>';
+        select.innerHTML = '';
+
+        // Add a default/placeholder option
+        const placeholderOption = document.createElement('option');
+        placeholderOption.value = '';
+        placeholderOption.textContent = t('select_option'); // Assuming 'select_option' key exists for "Select..."
+        select.appendChild(placeholderOption);
+
         data.forEach(item => {
             const option = document.createElement('option');
             option.value = item[valueKey];
