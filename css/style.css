@@ -311,13 +311,44 @@ th {
 /* --- Dashboard --- */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-auto-rows: minmax(400px, auto); /* Give rows a minimum height */
+    grid-template-areas:
+        "daily-sales"
+        "customer-ranking"
+        "product-sales"
+        "pending-debts";
+    grid-template-columns: 1fr;
     gap: 2rem;
 }
 
-.dashboard-grid .card:first-child {
-    grid-column: 1 / -1; /* Span all columns */
+#daily-sales-card { grid-area: daily-sales; }
+#product-sales-card { grid-area: product-sales; }
+#customer-ranking-card { grid-area: customer-ranking; }
+#pending-debts-card { grid-area: pending-debts; }
+
+.aspect-ratio-2-1 {
+    position: relative;
+    width: 100%;
+    padding-top: 50%; /* 2:1 Aspect Ratio */
+}
+
+.aspect-ratio-1-1 {
+    position: relative;
+    width: 100%;
+    padding-top: 100%; /* 1:1 Aspect Ratio */
+}
+
+.aspect-ratio-1-2 {
+    position: relative;
+    width: 100%;
+    padding-top: 200%; /* 1:2 Aspect Ratio */
+}
+
+.chart-container canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
 }
 
 .card {
@@ -329,7 +360,7 @@ th {
     flex-direction: column;
 }
 
-.card canvas {
+#daily-sales-card #sales-chart {
     flex-grow: 1;
     min-height: 0; /* Important for flexbox canvas resizing */
 }
