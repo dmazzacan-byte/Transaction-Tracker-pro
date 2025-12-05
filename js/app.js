@@ -64,8 +64,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const customersSearch = document.getElementById('customers-search');
     const productsSearch = document.getElementById('products-search');
     const ordersCustomerFilter = document.getElementById('orders-customer-filter');
+    const ordersCustomerFilterId = document.getElementById('orders-customer-filter-id');
     const ordersMonthFilter = document.getElementById('orders-month-filter');
     const ordersYearFilter = document.getElementById('orders-year-filter');
+    const paymentsCustomerFilter = document.getElementById('payments-customer-filter');
+    const paymentsCustomerFilterId = document.getElementById('payments-customer-filter-id');
+    const paymentsMonthFilter = document.getElementById('payments-month-filter');
+    const paymentsYearFilter = document.getElementById('payments-year-filter');
 
     // Forms
     const productForm = document.getElementById('product-form');
@@ -196,7 +201,37 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function setupOrderFilters() {
-        populateSelect('orders-customer-filter', [{id: '', name: t('all_customers')}, ...customers], 'id', 'name');
+        const resultsContainer = document.getElementById('orders-customer-filter-results');
+
+        ordersCustomerFilter.addEventListener('input', () => {
+            const searchTerm = ordersCustomerFilter.value.toLowerCase();
+            if (!searchTerm) {
+                resultsContainer.innerHTML = '';
+                ordersCustomerFilterId.value = '';
+                applyFilters(); // Re-render if cleared
+                return;
+            }
+            const filtered = customers.filter(c => c.name.toLowerCase().includes(searchTerm));
+            resultsContainer.innerHTML = '';
+            filtered.forEach(customer => {
+                const div = document.createElement('div');
+                div.textContent = customer.name;
+                div.addEventListener('click', () => {
+                    ordersCustomerFilter.value = customer.name;
+                    ordersCustomerFilterId.value = customer.id;
+                    resultsContainer.innerHTML = '';
+                    applyFilters();
+                });
+                resultsContainer.appendChild(div);
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!resultsContainer.contains(e.target) && e.target !== ordersCustomerFilter) {
+                resultsContainer.innerHTML = '';
+            }
+        });
+
 
         const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
         ordersMonthFilter.innerHTML = `<option value="">${t('all_months')}</option>` + months.map((m, i) => `<option value="${i}">${m}</option>`).join('');
@@ -213,16 +248,75 @@ document.addEventListener('DOMContentLoaded', () => {
         const applyFilters = () => {
             renderOrders(
                 ordersSearch.value,
-                ordersCustomerFilter.value,
+                ordersCustomerFilterId.value,
                 ordersMonthFilter.value,
                 ordersYearFilter.value
             );
         };
         if (!listenersAttached) {
-            ordersCustomerFilter.addEventListener('change', applyFilters);
+            // No event listener on the input itself, click on results triggers applyFilters
             ordersMonthFilter.addEventListener('change', applyFilters);
             ordersYearFilter.addEventListener('change', applyFilters);
             ordersSearch.addEventListener('input', applyFilters);
+        }
+        applyFilters(); // Initial render
+    }
+
+    function setupPaymentFilters() {
+        const resultsContainer = document.getElementById('payments-customer-filter-results');
+
+        paymentsCustomerFilter.addEventListener('input', () => {
+            const searchTerm = paymentsCustomerFilter.value.toLowerCase();
+            if (!searchTerm) {
+                resultsContainer.innerHTML = '';
+                paymentsCustomerFilterId.value = '';
+                applyFilters(); // Re-render if cleared
+                return;
+            }
+            const filtered = customers.filter(c => c.name.toLowerCase().includes(searchTerm));
+            resultsContainer.innerHTML = '';
+            filtered.forEach(customer => {
+                const div = document.createElement('div');
+                div.textContent = customer.name;
+                div.addEventListener('click', () => {
+                    paymentsCustomerFilter.value = customer.name;
+                    paymentsCustomerFilterId.value = customer.id;
+                    resultsContainer.innerHTML = '';
+                    applyFilters();
+                });
+                resultsContainer.appendChild(div);
+            });
+        });
+
+         document.addEventListener('click', (e) => {
+            if (!resultsContainer.contains(e.target) && e.target !== paymentsCustomerFilter) {
+                resultsContainer.innerHTML = '';
+            }
+        });
+
+
+        const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        paymentsMonthFilter.innerHTML = `<option value="">${t('all_months')}</option>` + months.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+        paymentsMonthFilter.value = new Date().getMonth();
+
+        const currentYear = new Date().getFullYear();
+        let yearOptions = `<option value="">${t('all_years')}</option>`;
+        for (let i = currentYear; i >= currentYear - 5; i--) {
+            yearOptions += `<option value="${i}">${i}</option>`;
+        }
+        paymentsYearFilter.innerHTML = yearOptions;
+        paymentsYearFilter.value = currentYear;
+
+        const applyFilters = () => {
+            renderPayments(
+                paymentsCustomerFilterId.value,
+                paymentsMonthFilter.value,
+                paymentsYearFilter.value
+            );
+        };
+        if (!listenersAttached) {
+            paymentsMonthFilter.addEventListener('change', applyFilters);
+            paymentsYearFilter.addEventListener('change', applyFilters);
         }
         applyFilters(); // Initial render
     }
@@ -235,6 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAll();
         setupDashboard();
         setupOrderFilters();
+        setupPaymentFilters();
         if (!listenersAttached) {
             customersSearch.addEventListener('input', () => renderCustomers(customersSearch.value));
             productsSearch.addEventListener('input', () => renderProducts(productsSearch.value));
@@ -409,6 +504,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         filteredOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
 
+        let totalSum = 0;
+        let amountPaidSum = 0;
+
         filteredOrders.forEach(o => {
             const customer = customers.find(c => c && c.id === o.customerId)?.name || 'N/A';
             const items = Array.isArray(o.items) ? o.items : [];
@@ -420,43 +518,73 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const status = o.status || 'N/A';
             const statusClass = `status-${status.toLowerCase()}`;
-            const totalQuantity = items.reduce((sum, item) => sum + (parseInt(item.quantity) || 0), 0);
-            const total = parseFloat(o.total);
-            const amountPaid = parseFloat(o.amountPaid);
+            const total = parseFloat(o.total) || 0;
+            const amountPaid = parseFloat(o.amountPaid) || 0;
+
+            totalSum += total;
+            amountPaidSum += amountPaid;
 
             const row = `
                 <tr>
                     <td>${new Date(o.date).toLocaleDateString()}</td>
                     <td>${customer}</td>
                     <td>${itemsSummary}</td>
-                    <td>${totalQuantity}</td>
-                    <td>$${!isNaN(total) ? total.toFixed(2) : '0.00'}</td>
-                    <td>$${!isNaN(amountPaid) ? amountPaid.toFixed(2) : '0.00'}</td>
+                    <td>$${total.toFixed(2)}</td>
+                    <td>$${amountPaid.toFixed(2)}</td>
                     <td><span class="status ${statusClass}">${t(status.toLowerCase())}</span></td>
                     <td>
                         <button class="action-btn edit" data-id="${o.id}" data-type="order" title="${t('edit')}"><i class="fas fa-edit"></i></button>
                         <button class="action-btn delete" data-id="${o.id}" data-type="order" title="${t('delete')}"><i class="fas fa-trash"></i></button>
                         <button class="action-btn pay" data-id="${o.id}" data-type="order" title="${t('pay')}"><i class="fas fa-dollar-sign"></i></button>
+                        <button class="action-btn whatsapp-btn"
+                                data-customer-id="${o.customerId}"
+                                data-amount="${(total - amountPaid).toFixed(2)}"
+                                title="Send WhatsApp Reminder">
+                            <i class="fab fa-whatsapp"></i>
+                        </button>
                     </td>
                 </tr>
             `;
             ordersTableBody.innerHTML += row;
         });
+
+        const footer = document.getElementById('orders-table-footer');
+        footer.innerHTML = `
+            <tr>
+                <td colspan="3"><strong>Total General</strong></td>
+                <td><strong>$${totalSum.toFixed(2)}</strong></td>
+                <td><strong>$${amountPaidSum.toFixed(2)}</strong></td>
+                <td colspan="2"></td>
+            </tr>
+        `;
     }
 
-    function renderPayments() {
+    function renderPayments(customerId, month, year) {
         paymentsTableBody.innerHTML = '';
         if (!payments) return;
 
-        const validPayments = payments.filter(p => {
+        let filteredPayments = payments.filter(p => {
             if (!p || !p.date) return false;
             const paymentDate = new Date(p.date);
             return !isNaN(paymentDate.getTime());
         });
 
-        validPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
+        if (customerId) {
+            // Find all orders belonging to the customer
+            const customerOrderIds = new Set(orders.filter(o => o.customerId === customerId).map(o => o.id));
+            // Filter payments that are linked to one of those orders
+            filteredPayments = filteredPayments.filter(p => customerOrderIds.has(p.orderId));
+        }
+        if (month) {
+            filteredPayments = filteredPayments.filter(p => new Date(p.date).getMonth() == month);
+        }
+        if (year) {
+            filteredPayments = filteredPayments.filter(p => new Date(p.date).getFullYear() == year);
+        }
 
-        validPayments.forEach(p => {
+        filteredPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        filteredPayments.forEach(p => {
             const order = orders.find(o => o && o.id === p.orderId);
             const customer = customers.find(c => c && c.id === order?.customerId)?.name || 'N/A';
             const orderId = order ? `Order #${order.id.substring(0, 5)}...` : 'N/A';
@@ -805,12 +933,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
      paymentForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const orderId = document.getElementById('payment-order-id').value || document.getElementById('payment-order').value;
+        const id = document.getElementById('payment-id').value;
+        const orderId = document.getElementById('payment-order').value || document.getElementById('payment-order-id').value;
         const amount = parseFloat(document.getElementById('payment-amount').value);
 
         const dateParts = document.getElementById('payment-date').value.split('-');
         const year = parseInt(dateParts[0], 10);
-        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
+        const month = parseInt(dateParts[1], 10) - 1;
         const day = parseInt(dateParts[2], 10);
         const localDate = new Date(year, month, day);
 
@@ -821,21 +950,29 @@ document.addEventListener('DOMContentLoaded', () => {
             date: localDate.toISOString()
         };
 
-        // Add payment
-        await addDoc(collection(db, `users/${currentUser.uid}/payments`), data);
-
-        // Update order
-        const order = orders.find(o => o.id === orderId);
-        if (order) {
-            const newAmountPaid = (order.amountPaid || 0) + amount;
-            const newStatus = newAmountPaid >= order.total ? 'Paid' : 'Partial';
-            const orderRef = doc(db, `users/${currentUser.uid}/orders`, orderId);
-            await updateDoc(orderRef, { amountPaid: newAmountPaid, status: newStatus });
-        }
+        await saveOrUpdate('payments', id, data);
+        await updateOrderPaymentStatus(orderId);
 
         closeModal();
         await initApp();
     });
+
+    async function updateOrderPaymentStatus(orderId) {
+        if (!orderId) return;
+
+        // Re-fetch all payments for the order to ensure data is current
+        const paymentsForOrderSnap = await getDocs(query(collection(db, `users/${currentUser.uid}/payments`), where("orderId", "==", orderId)));
+        const paymentsForOrder = paymentsForOrderSnap.docs.map(doc => doc.data());
+
+        const totalPaid = paymentsForOrder.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+        const order = orders.find(o => o.id === orderId);
+        if (order) {
+            const newStatus = totalPaid >= order.total ? 'Paid' : (totalPaid > 0 ? 'Partial' : 'Pending');
+            const orderRef = doc(db, `users/${currentUser.uid}/orders`, orderId);
+            await updateDoc(orderRef, { amountPaid: totalPaid, status: newStatus });
+        }
+    }
 
     async function saveOrUpdate(collectionName, id, data) {
         const collectionRef = collection(db, `users/${currentUser.uid}/${collectionName}`);
@@ -876,6 +1013,42 @@ document.addEventListener('DOMContentLoaded', () => {
              document.getElementById('payment-amount').value = remaining.toFixed(2);
              document.getElementById('payment-modal-title').textContent = 'Register Payment';
              openModal('payment-modal');
+        } else if (target.classList.contains('whatsapp-btn')) {
+            const customerId = target.dataset.customerId;
+            const orderId = target.closest('tr')?.querySelector('.edit')?.dataset.id;
+            const customer = customers.find(c => c.id === customerId);
+
+            if (customer && customer.phone) {
+                let message;
+                // Check if the button is inside the orders table
+                if (orderId && target.closest('#orders-table-body')) {
+                    const order = orders.find(o => o.id === orderId);
+                    if (order) {
+                        const orderDate = new Date(order.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: '2-digit' }).replace('.', '');
+                        message = `Entregado ${orderDate}:\n\n`;
+
+                        const itemLines = order.items.map(item => {
+                            const product = products.find(p => p.id === item.productId);
+                            const price = item.priceType === 'wholesale' ? product.wholesalePrice : product.retailPrice;
+                            const itemTotal = item.quantity * price;
+                            return `• ${item.quantity} x ${product.description} x ${price.toFixed(2)}$ = ${itemTotal.toFixed(2)}$`;
+                        });
+
+                        message += itemLines.join('\n');
+                        message += `\n--------------------\nTotal: ${order.total.toFixed(2)}$`;
+                    }
+                } else {
+                    // Fallback for pending payments or other contexts
+                    const amount = target.dataset.amount;
+                    const daysOld = target.dataset.daysOld;
+                    message = `Hola, espero que estés muy bien, te recuerdo que tienes un pago pendiente por $${amount} y han transcurrido ${daysOld} días desde la entrega del pedido. Gracias!`;
+                }
+
+                const whatsappUrl = `https://wa.me/${customer.phone}?text=${encodeURIComponent(message)}`;
+                window.open(whatsappUrl, '_blank');
+            } else {
+                alert('Este cliente no tiene un número de teléfono registrado.');
+            }
         }
     });
 
@@ -921,6 +1094,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('order-status').value = item.status;
                 document.getElementById('order-modal-title').textContent = t('edit_order');
                 openModal('order-modal');
+                break;
+            case 'payment':
+                item = payments.find(i => i.id === id);
+                if (!item) return;
+                document.getElementById('payment-id').value = item.id;
+                document.getElementById('payment-date').value = new Date(item.date).toISOString().split('T')[0];
+                document.getElementById('payment-amount').value = item.amount;
+                document.getElementById('payment-reference').value = item.reference;
+
+                // Set customer and order
+                const order = orders.find(o => o.id === item.orderId);
+                if (order) {
+                    populateSelect('payment-customer', customers, 'id', 'name', order.customerId);
+
+                    const paymentOrderSelect = document.getElementById('payment-order');
+                    paymentOrderSelect.innerHTML = `<option value="${order.id}">Order of ${new Date(order.date).toLocaleDateString()}</option>`;
+                    paymentOrderSelect.disabled = false; // Ensure it is enabled
+                }
+
+                document.getElementById('payment-modal-title').textContent = t('edit_payment');
+                openModal('payment-modal');
                 break;
         }
     }

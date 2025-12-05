@@ -99,18 +99,19 @@
             </div>
 
             <div id="orders" class="tab-content">
-                 <div class="header">
+                <div class="header">
                     <h1 data-i18n-key="orders">Orders</h1>
-                     <div class="filters">
-                        <label data-i18n-key="filter_by">Filter by:</label>
-                        <select id="orders-customer-filter"></select>
+                    <div class="filter-bar">
+                        <label data-i18n-key="filter_by" class="filter-title">Filter by:</label>
+                        <div class="autocomplete-container">
+                            <input type="text" id="orders-customer-filter" placeholder="Todos los Clientes" autocomplete="off">
+                            <div id="orders-customer-filter-results" class="autocomplete-results"></div>
+                        </div>
+                        <input type="hidden" id="orders-customer-filter-id">
                         <select id="orders-month-filter"></select>
                         <select id="orders-year-filter"></select>
+                        <button id="add-order-btn" class="btn-primary"><i class="fas fa-plus"></i> <span data-i18n-key="new_order">New Order</span></button>
                     </div>
-                    <div class="search-container">
-                        <input type="text" id="orders-search" data-i18n-placeholder="search_orders">
-                    </div>
-                    <button id="add-order-btn" class="btn-primary"><i class="fas fa-plus"></i> <span data-i18n-key="new_order">New Order</span></button>
                 </div>
                 <div class="table-container">
                     <table>
@@ -119,7 +120,6 @@
                                 <th>Date</th>
                                 <th>Customer</th>
                                 <th>Product</th>
-                                <th>Quantity</th>
                                 <th>Total</th>
                                 <th>Amount Paid</th>
                                 <th>Status</th>
@@ -127,6 +127,9 @@
                             </tr>
                         </thead>
                         <tbody id="orders-table-body"></tbody>
+                        <tfoot id="orders-table-footer">
+                            <!-- Totals will be inserted here -->
+                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -157,14 +160,19 @@
             </div>
 
             <div id="payments" class="tab-content">
-                 <div class="header">
+                <div class="header">
                     <h1 data-i18n-key="payments">Payments</h1>
-                     <div class="filters">
-                        <label data-i18n-key="filter_by">Filter by:</label>
-                        <select id="payments-customer-filter"></select>
-                        <input type="date" id="payments-date-filter">
+                    <div class="filter-bar">
+                        <label data-i18n-key="filter_by" class="filter-title">Filter by:</label>
+                        <div class="autocomplete-container">
+                             <input type="text" id="payments-customer-filter" placeholder="Todos los Clientes" autocomplete="off">
+                             <div id="payments-customer-filter-results" class="autocomplete-results"></div>
+                        </div>
+                        <input type="hidden" id="payments-customer-filter-id">
+                        <select id="payments-month-filter"></select>
+                        <select id="payments-year-filter"></select>
+                        <button id="add-payment-btn" class="btn-primary"><i class="fas fa-plus"></i> <span data-i18n-key="new_payment">New Payment</span></button>
                     </div>
-                    <button id="add-payment-btn" class="btn-primary"><i class="fas fa-plus"></i> <span data-i18n-key="new_payment">New Payment</span></button>
                 </div>
                 <div class="table-container">
                     <table>
