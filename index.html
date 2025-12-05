@@ -102,8 +102,12 @@
                  <div class="header">
                     <h1 data-i18n-key="orders">Orders</h1>
                      <div class="filters">
-                        <label data-i18n-key="filter_by">Filter by:</label>
-                        <select id="orders-customer-filter"></select>
+                        <label data-i18n-key="filter_by" class="filter-title">Filter by:</label>
+                        <div class="autocomplete-container">
+                           <input type="text" id="orders-customer-filter" placeholder="Todos los Clientes" autocomplete="off">
+                           <div id="orders-customer-filter-results" class="autocomplete-results"></div>
+                        </div>
+                        <input type="hidden" id="orders-customer-filter-id">
                         <select id="orders-month-filter"></select>
                         <select id="orders-year-filter"></select>
                     </div>
@@ -119,7 +123,6 @@
                                 <th>Date</th>
                                 <th>Customer</th>
                                 <th>Product</th>
-                                <th>Quantity</th>
                                 <th>Total</th>
                                 <th>Amount Paid</th>
                                 <th>Status</th>
@@ -127,6 +130,9 @@
                             </tr>
                         </thead>
                         <tbody id="orders-table-body"></tbody>
+                        <tfoot id="orders-table-footer">
+                            <!-- Totals will be inserted here -->
+                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -160,9 +166,10 @@
                  <div class="header">
                     <h1 data-i18n-key="payments">Payments</h1>
                      <div class="filters">
-                        <label data-i18n-key="filter_by">Filter by:</label>
+                        <label data-i18n-key="filter_by" class="filter-title">Filter by:</label>
                         <select id="payments-customer-filter"></select>
-                        <input type="date" id="payments-date-filter">
+                        <select id="payments-month-filter"></select>
+                        <select id="payments-year-filter"></select>
                     </div>
                     <button id="add-payment-btn" class="btn-primary"><i class="fas fa-plus"></i> <span data-i18n-key="new_payment">New Payment</span></button>
                 </div>
