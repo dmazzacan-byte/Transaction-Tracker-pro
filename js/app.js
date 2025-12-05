@@ -1,3 +1,4 @@
+
 import { auth, db } from './firebase.js';
 import {
     createUserWithEmailAndPassword,
@@ -462,6 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>
                         <button class="action-btn edit" data-id="${c.id}" data-type="customer" title="${t('edit')}"><i class="fas fa-edit"></i></button>
                         <button class="action-btn delete" data-id="${c.id}" data-type="customer" title="${t('delete')}"><i class="fas fa-trash"></i></button>
+                        <button class="action-btn whatsapp-btn" data-id="${c.id}" data-type="customer" data-pending-amount="${pendingAmount.toFixed(2)}" title="Send WhatsApp"><i class="fab fa-whatsapp"></i></button>
                     </td>
                 </tr>
             `;
@@ -531,6 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button class="action-btn edit" data-id="${o.id}" data-type="order" title="${t('edit')}"><i class="fas fa-edit"></i></button>
                         <button class="action-btn delete" data-id="${o.id}" data-type="order" title="${t('delete')}"><i class="fas fa-trash"></i></button>
                         <button class="action-btn pay" data-id="${o.id}" data-type="order" title="${t('pay')}"><i class="fas fa-dollar-sign"></i></button>
+                        <button class="action-btn whatsapp-btn" data-id="${o.id}" data-type="order" title="Send WhatsApp"><i class="fab fa-whatsapp"></i></button>
                     </td>
                 </tr>
             `;
@@ -912,12 +915,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
      paymentForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const id = document.getElementById('payment-id').value;
         const orderId = document.getElementById('payment-order-id').value || document.getElementById('payment-order').value;
         const amount = parseFloat(document.getElementById('payment-amount').value);
 
         const dateParts = document.getElementById('payment-date').value.split('-');
         const year = parseInt(dateParts[0], 10);
-        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
+        const month = parseInt(dateParts[1], 10) - 1;
         const day = parseInt(dateParts[2], 10);
         const localDate = new Date(year, month, day);
 
@@ -928,16 +932,33 @@ document.addEventListener('DOMContentLoaded', () => {
             date: localDate.toISOString()
         };
 
-        // Add payment
-        await addDoc(collection(db, `users/${currentUser.uid}/payments`), data);
+        if (id) {
+            // Logic to update an existing payment
+            const oldPayment = payments.find(p => p.id === id);
+            const amountDifference = amount - oldPayment.amount;
 
-        // Update order
-        const order = orders.find(o => o.id === orderId);
-        if (order) {
-            const newAmountPaid = (order.amountPaid || 0) + amount;
-            const newStatus = newAmountPaid >= order.total ? 'Paid' : 'Partial';
-            const orderRef = doc(db, `users/${currentUser.uid}/orders`, orderId);
-            await updateDoc(orderRef, { amountPaid: newAmountPaid, status: newStatus });
+            await saveOrUpdate('payments', id, data);
+
+            // Update the associated order
+            const order = orders.find(o => o.id === orderId);
+            if (order) {
+                const newAmountPaid = (order.amountPaid || 0) + amountDifference;
+                const newStatus = newAmountPaid >= order.total ? 'Paid' : 'Partial';
+                const orderRef = doc(db, `users/${currentUser.uid}/orders`, orderId);
+                await updateDoc(orderRef, { amountPaid: newAmountPaid, status: newStatus });
+            }
+        } else {
+            // Logic to add a new payment
+            await addDoc(collection(db, `users/${currentUser.uid}/payments`), data);
+
+            // Update order
+            const order = orders.find(o => o.id === orderId);
+            if (order) {
+                const newAmountPaid = (order.amountPaid || 0) + amount;
+                const newStatus = newAmountPaid >= order.total ? 'Paid' : 'Partial';
+                const orderRef = doc(db, `users/${currentUser.uid}/orders`, orderId);
+                await updateDoc(orderRef, { amountPaid: newAmountPaid, status: newStatus });
+            }
         }
 
         closeModal();
@@ -983,6 +1004,8 @@ document.addEventListener('DOMContentLoaded', () => {
              document.getElementById('payment-amount').value = remaining.toFixed(2);
              document.getElementById('payment-modal-title').textContent = 'Register Payment';
              openModal('payment-modal');
+        } else if (target.classList.contains('whatsapp-btn')) {
+            handleWhatsApp(id, type, target.dataset);
         }
     });
 
@@ -1022,12 +1045,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 document.getElementById('order-items-container').innerHTML = '';
-                item.items.forEach(orderItem => addOrderItem(orderItem));
+                if (Array.isArray(item.items)) {
+                    item.items.forEach(orderItem => addOrderItem(orderItem));
+                }
                 updateOrderTotal();
 
                 document.getElementById('order-status').value = item.status;
                 document.getElementById('order-modal-title').textContent = t('edit_order');
                 openModal('order-modal');
+                break;
+            case 'payment':
+                item = payments.find(i => i.id === id);
+                if (!item) return;
+
+                document.getElementById('payment-id').value = item.id;
+                document.getElementById('payment-date').value = new Date(item.date).toISOString().split('T')[0];
+                document.getElementById('payment-amount').value = item.amount;
+                document.getElementById('payment-reference').value = item.reference;
+
+                const associatedOrder = orders.find(o => o.id === item.orderId);
+                if (associatedOrder) {
+                    const customerOfOrder = customers.find(c => c.id === associatedOrder.customerId);
+                    if (customerOfOrder) {
+                        populateSelect('payment-customer', customers, 'id', 'name', customerOfOrder.id);
+                        document.getElementById('payment-customer').dispatchEvent(new Event('change'));
+
+                        // Use a timeout to ensure the order dropdown is populated before selecting
+                        setTimeout(() => {
+                            populateSelect('payment-order', [associatedOrder], 'id', 'id', item.orderId);
+                             document.getElementById('payment-order').value = item.orderId;
+                        }, 100);
+                    }
+                }
+
+                document.getElementById('payment-modal-title').textContent = t('edit_payment');
+                openModal('payment-modal');
                 break;
         }
     }
@@ -1319,8 +1371,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${daysOld} ${t('days_old')}</td>
                     <td>
                         <button class="action-btn whatsapp-btn"
-                                data-customer-id="${o.customerId}"
-                                data-customer-name="${customerName}"
+                                data-id="${o.customerId}"
+                                data-type="pending-payment"
                                 data-amount="${remaining.toFixed(2)}"
                                 data-days-old="${daysOld}"
                                 title="Send WhatsApp Reminder">
@@ -1332,6 +1384,58 @@ document.addEventListener('DOMContentLoaded', () => {
             pendingPaymentsTableBody.innerHTML += row;
         });
     }
+
+    function handleWhatsApp(id, type, dataset) {
+        let customer;
+        let message = '';
+        let order;
+
+        switch (type) {
+            case 'pending-payment':
+            case 'customer':
+                customer = customers.find(c => c.id === id);
+                break;
+            case 'order':
+                order = orders.find(o => o.id === id);
+                if (order) {
+                    customer = customers.find(c => c.id === order.customerId);
+                }
+                break;
+        }
+
+        if (!customer || !customer.phone) {
+            alert(t('customer_has_no_phone'));
+            return;
+        }
+
+        switch (type) {
+            case 'pending-payment':
+                const amount = dataset.amount;
+                const daysOld = dataset.daysOld;
+                message = `Hola, espero que estés muy bien, te recuerdo que tienes un pago pendiente por $${amount} y han transcurrido ${daysOld} días desde la entrega del pedido. Gracias!`;
+                break;
+            case 'customer':
+                const pendingAmount = dataset.pendingAmount;
+                message = `Saldo: ${pendingAmount}`;
+                break;
+            case 'order':
+                 if (!order) return; // Should be found already, but as a safeguard
+                 const itemsSummary = (order.items || []).map(item => {
+                    const product = products.find(p => p.id === item.productId);
+                    const price = item.priceType === 'wholesale' ? product.wholesalePrice : product.retailPrice;
+                    const itemTotal = (item.quantity * price).toFixed(2);
+                    return `• ${item.quantity} x ${product.description} x ${price.toFixed(2)}$ = ${itemTotal}$`;
+                 }).join('\n');
+                 message = `Entregado ${new Date(order.date).toLocaleDateString()}:\n\n${itemsSummary}\n--------------------\nTotal: ${order.total.toFixed(2)}$`;
+                 break;
+        }
+
+        if (message) {
+            const whatsappUrl = `https://wa.me/${customer.phone}?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+        }
+    }
+
 
     // --- Helpers ---
     function populateSelect(selectId, data, valueKey, textKey, selectedValue) {
