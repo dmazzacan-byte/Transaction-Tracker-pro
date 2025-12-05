@@ -525,7 +525,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${new Date(o.date).toLocaleDateString()}</td>
                     <td>${customer}</td>
                     <td>${itemsSummary}</td>
-                    <td>${totalQuantity}</td>
                     <td>$${!isNaN(total) ? total.toFixed(2) : '0.00'}</td>
                     <td>$${!isNaN(amountPaid) ? amountPaid.toFixed(2) : '0.00'}</td>
                     <td><span class="status ${statusClass}">${t(status.toLowerCase())}</span></td>
@@ -1332,7 +1331,24 @@ document.addEventListener('DOMContentLoaded', () => {
                       backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6c757d'],
                  }]
              },
-             options: { responsive: true }
+             options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'left',
+                    },
+                    datalabels: {
+                        formatter: (value, ctx) => {
+                            const datapoints = ctx.chart.data.datasets[0].data;
+                            const total = datapoints.reduce((total, datapoint) => total + datapoint, 0);
+                            const percentage = value / total * 100;
+                            return percentage.toFixed(2) + "%";
+                        },
+                        color: '#fff',
+                    }
+                }
+            }
          });
     }
 
