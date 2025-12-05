@@ -64,8 +64,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const customersSearch = document.getElementById('customers-search');
     const productsSearch = document.getElementById('products-search');
     const ordersCustomerFilter = document.getElementById('orders-customer-filter');
+    const ordersCustomerFilterId = document.getElementById('orders-customer-filter-id');
     const ordersMonthFilter = document.getElementById('orders-month-filter');
     const ordersYearFilter = document.getElementById('orders-year-filter');
+    const paymentsCustomerFilter = document.getElementById('payments-customer-filter');
+    const paymentsCustomerFilterId = document.getElementById('payments-customer-filter-id');
+    const paymentsMonthFilter = document.getElementById('payments-month-filter');
+    const paymentsYearFilter = document.getElementById('payments-year-filter');
 
     // Forms
     const productForm = document.getElementById('product-form');
@@ -196,7 +201,37 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function setupOrderFilters() {
-        populateSelect('orders-customer-filter', [{id: '', name: t('all_customers')}, ...customers], 'id', 'name');
+        const resultsContainer = document.getElementById('orders-customer-filter-results');
+
+        ordersCustomerFilter.addEventListener('input', () => {
+            const searchTerm = ordersCustomerFilter.value.toLowerCase();
+            if (!searchTerm) {
+                resultsContainer.innerHTML = '';
+                ordersCustomerFilterId.value = '';
+                applyFilters(); // Re-render if cleared
+                return;
+            }
+            const filtered = customers.filter(c => c.name.toLowerCase().includes(searchTerm));
+            resultsContainer.innerHTML = '';
+            filtered.forEach(customer => {
+                const div = document.createElement('div');
+                div.textContent = customer.name;
+                div.addEventListener('click', () => {
+                    ordersCustomerFilter.value = customer.name;
+                    ordersCustomerFilterId.value = customer.id;
+                    resultsContainer.innerHTML = '';
+                    applyFilters();
+                });
+                resultsContainer.appendChild(div);
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!resultsContainer.contains(e.target) && e.target !== ordersCustomerFilter) {
+                resultsContainer.innerHTML = '';
+            }
+        });
+
 
         const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
         ordersMonthFilter.innerHTML = `<option value="">${t('all_months')}</option>` + months.map((m, i) => `<option value="${i}">${m}</option>`).join('');
@@ -212,17 +247,75 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const applyFilters = () => {
             renderOrders(
-                ordersSearch.value,
-                ordersCustomerFilter.value,
+            null,
+                ordersCustomerFilterId.value,
                 ordersMonthFilter.value,
                 ordersYearFilter.value
             );
         };
         if (!listenersAttached) {
-            ordersCustomerFilter.addEventListener('change', applyFilters);
+            // No event listener on the input itself, click on results triggers applyFilters
             ordersMonthFilter.addEventListener('change', applyFilters);
             ordersYearFilter.addEventListener('change', applyFilters);
-            ordersSearch.addEventListener('input', applyFilters);
+        }
+        applyFilters(); // Initial render
+    }
+
+    function setupPaymentFilters() {
+        const resultsContainer = document.getElementById('payments-customer-filter-results');
+
+        paymentsCustomerFilter.addEventListener('input', () => {
+            const searchTerm = paymentsCustomerFilter.value.toLowerCase();
+            if (!searchTerm) {
+                resultsContainer.innerHTML = '';
+                paymentsCustomerFilterId.value = '';
+                applyFilters(); // Re-render if cleared
+                return;
+            }
+            const filtered = customers.filter(c => c.name.toLowerCase().includes(searchTerm));
+            resultsContainer.innerHTML = '';
+            filtered.forEach(customer => {
+                const div = document.createElement('div');
+                div.textContent = customer.name;
+                div.addEventListener('click', () => {
+                    paymentsCustomerFilter.value = customer.name;
+                    paymentsCustomerFilterId.value = customer.id;
+                    resultsContainer.innerHTML = '';
+                    applyFilters();
+                });
+                resultsContainer.appendChild(div);
+            });
+        });
+
+         document.addEventListener('click', (e) => {
+            if (!resultsContainer.contains(e.target) && e.target !== paymentsCustomerFilter) {
+                resultsContainer.innerHTML = '';
+            }
+        });
+
+
+        const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        paymentsMonthFilter.innerHTML = `<option value="">${t('all_months')}</option>` + months.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+        paymentsMonthFilter.value = new Date().getMonth();
+
+        const currentYear = new Date().getFullYear();
+        let yearOptions = `<option value="">${t('all_years')}</option>`;
+        for (let i = currentYear; i >= currentYear - 5; i--) {
+            yearOptions += `<option value="${i}">${i}</option>`;
+        }
+        paymentsYearFilter.innerHTML = yearOptions;
+        paymentsYearFilter.value = currentYear;
+
+        const applyFilters = () => {
+            renderPayments(
+                paymentsCustomerFilterId.value,
+                paymentsMonthFilter.value,
+                paymentsYearFilter.value
+            );
+        };
+        if (!listenersAttached) {
+            paymentsMonthFilter.addEventListener('change', applyFilters);
+            paymentsYearFilter.addEventListener('change', applyFilters);
         }
         applyFilters(); // Initial render
     }
@@ -235,6 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAll();
         setupDashboard();
         setupOrderFilters();
+        setupPaymentFilters();
         if (!listenersAttached) {
             customersSearch.addEventListener('input', () => renderCustomers(customersSearch.value));
             productsSearch.addEventListener('input', () => renderProducts(productsSearch.value));
@@ -444,19 +538,32 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function renderPayments() {
+    function renderPayments(customerId, month, year) {
         paymentsTableBody.innerHTML = '';
         if (!payments) return;
 
-        const validPayments = payments.filter(p => {
+        let filteredPayments = payments.filter(p => {
             if (!p || !p.date) return false;
             const paymentDate = new Date(p.date);
             return !isNaN(paymentDate.getTime());
         });
 
-        validPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
+        if (customerId) {
+            // Find all orders belonging to the customer
+            const customerOrderIds = new Set(orders.filter(o => o.customerId === customerId).map(o => o.id));
+            // Filter payments that are linked to one of those orders
+            filteredPayments = filteredPayments.filter(p => customerOrderIds.has(p.orderId));
+        }
+        if (month) {
+            filteredPayments = filteredPayments.filter(p => new Date(p.date).getMonth() == month);
+        }
+        if (year) {
+            filteredPayments = filteredPayments.filter(p => new Date(p.date).getFullYear() == year);
+        }
 
-        validPayments.forEach(p => {
+        filteredPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        filteredPayments.forEach(p => {
             const order = orders.find(o => o && o.id === p.orderId);
             const customer = customers.find(c => c && c.id === order?.customerId)?.name || 'N/A';
             const orderId = order ? `Order #${order.id.substring(0, 5)}...` : 'N/A';

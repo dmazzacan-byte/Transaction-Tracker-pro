@@ -378,10 +378,42 @@ th {
     display: flex;
     gap: 1rem;
 }
-.filters select {
+.filters select, .filters input, .filters .btn-primary, .filters .autocomplete-container {
     padding: 0.5rem;
     border: 1px solid var(--border-color);
     border-radius: 4px;
+    height: 40px; /* Consistent height */
+}
+
+.filters input, .filters select {
+    width: 150px; /* Or use flex-grow */
+}
+
+/* New Filter Bar Styles */
+.filter-bar {
+    display: flex;
+    align-items: end;
+    gap: 1rem;
+    flex-grow: 1;
+    flex-wrap: wrap;
+}
+
+.filter-bar > * {
+    flex: 1 1 auto; /* Allow items to grow and shrink */
+    min-width: 150px; /* Prevent items from becoming too small */
+}
+
+.filter-bar .autocomplete-container {
+    flex-grow: 2; /* Give more space to the search bar */
+}
+
+.filter-bar .btn-primary {
+    flex-grow: 0; /* Don't allow the button to grow */
+    white-space: nowrap; /* Prevent button text from wrapping */
+}
+
+.filter-bar label {
+    flex-shrink: 0; /* Prevent the label from shrinking */
 }
 
 
@@ -471,7 +503,7 @@ th {
 
 .autocomplete-container {
     position: relative;
-    margin-bottom: 1rem;
+    margin-bottom: 0;
 }
 
 .autocomplete-results {
