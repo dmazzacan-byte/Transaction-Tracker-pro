@@ -1,3 +1,4 @@
+
 import { auth, db } from './firebase.js';
 import {
     createUserWithEmailAndPassword,
@@ -462,6 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>
                         <button class="action-btn edit" data-id="${c.id}" data-type="customer" title="${t('edit')}"><i class="fas fa-edit"></i></button>
                         <button class="action-btn delete" data-id="${c.id}" data-type="customer" title="${t('delete')}"><i class="fas fa-trash"></i></button>
+                        <button class="action-btn whatsapp-btn" data-id="${c.id}" data-type="customer" data-pending-amount="${pendingAmount.toFixed(2)}" title="Send WhatsApp"><i class="fab fa-whatsapp"></i></button>
                     </td>
                 </tr>
             `;
@@ -531,6 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button class="action-btn edit" data-id="${o.id}" data-type="order" title="${t('edit')}"><i class="fas fa-edit"></i></button>
                         <button class="action-btn delete" data-id="${o.id}" data-type="order" title="${t('delete')}"><i class="fas fa-trash"></i></button>
                         <button class="action-btn pay" data-id="${o.id}" data-type="order" title="${t('pay')}"><i class="fas fa-dollar-sign"></i></button>
+                        <button class="action-btn whatsapp-btn" data-id="${o.id}" data-type="order" title="Send WhatsApp"><i class="fab fa-whatsapp"></i></button>
                     </td>
                 </tr>
             `;
@@ -983,6 +986,8 @@ document.addEventListener('DOMContentLoaded', () => {
              document.getElementById('payment-amount').value = remaining.toFixed(2);
              document.getElementById('payment-modal-title').textContent = 'Register Payment';
              openModal('payment-modal');
+        } else if (target.classList.contains('whatsapp-btn')) {
+            handleWhatsApp(id, type, target.dataset);
         }
     });
 
@@ -1022,7 +1027,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 document.getElementById('order-items-container').innerHTML = '';
-                item.items.forEach(orderItem => addOrderItem(orderItem));
+                if (Array.isArray(item.items)) {
+                    item.items.forEach(orderItem => addOrderItem(orderItem));
+                }
                 updateOrderTotal();
 
                 document.getElementById('order-status').value = item.status;
@@ -1319,8 +1326,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${daysOld} ${t('days_old')}</td>
                     <td>
                         <button class="action-btn whatsapp-btn"
-                                data-customer-id="${o.customerId}"
-                                data-customer-name="${customerName}"
+                                data-id="${o.customerId}"
+                                data-type="pending-payment"
                                 data-amount="${remaining.toFixed(2)}"
                                 data-days-old="${daysOld}"
                                 title="Send WhatsApp Reminder">
@@ -1332,6 +1339,56 @@ document.addEventListener('DOMContentLoaded', () => {
             pendingPaymentsTableBody.innerHTML += row;
         });
     }
+
+    function handleWhatsApp(id, type, dataset) {
+        let customer;
+        let message = '';
+        let order;
+
+        switch (type) {
+            case 'pending-payment':
+            case 'customer':
+                customer = customers.find(c => c.id === id);
+                break;
+            case 'order':
+                order = orders.find(o => o.id === id);
+                if (order) {
+                    customer = customers.find(c => c.id === order.customerId);
+                }
+                break;
+        }
+
+        if (!customer || !customer.phone) {
+            alert(t('customer_has_no_phone'));
+            return;
+        }
+
+        switch (type) {
+            case 'pending-payment':
+                const amount = dataset.amount;
+                const daysOld = dataset.daysOld;
+                message = `Hola, espero que estés muy bien, te recuerdo que tienes un pago pendiente por $${amount} y han transcurrido ${daysOld} días desde la entrega del pedido. Gracias!`;
+                break;
+            case 'customer':
+                const pendingAmount = dataset.pendingAmount;
+                message = `Saldo: ${pendingAmount}`;
+                break;
+            case 'order':
+                 if (!order) return; // Should be found already, but as a safeguard
+                 const itemsSummary = (order.items || []).map(item => {
+                    const product = products.find(p => p.id === item.productId);
+                    return `${item.quantity} x ${product ? product.description : 'N/A'}`;
+                 }).join(', ');
+                 message = `Hola, te envío un resumen de tu orden del ${new Date(order.date).toLocaleDateString()}: ${itemsSummary}. Total: $${order.total.toFixed(2)}.`;
+                 break;
+        }
+
+        if (message) {
+            const whatsappUrl = `https://wa.me/${customer.phone}?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+        }
+    }
+
 
     // --- Helpers ---
     function populateSelect(selectId, data, valueKey, textKey, selectedValue) {

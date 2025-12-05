@@ -101,6 +101,11 @@ body {
     height: 100%;
 }
 
+.pie-chart-container {
+    width: 80%;
+    margin: 0 auto;
+}
+
 .sidebar {
     width: var(--sidebar-width);
     background-color: var(--primary-color);
