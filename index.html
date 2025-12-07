@@ -53,7 +53,7 @@
             <div id="dashboard" class="tab-content active">
                 <div class="header">
                     <h1>Dashboard</h1>
-                    <div class="filters">
+                    <div class="standard-toolbar">
                         <select id="dashboard-month"></select>
                         <select id="dashboard-year"></select>
                     </div>
@@ -100,10 +100,9 @@
             <div id="orders" class="tab-content">
                 <div class="header">
                     <h1>Pedidos</h1>
-                    <div class="filter-bar">
-                        <label class="filter-title">Filtrar por:</label>
+                    <div class="standard-toolbar">
                         <div class="autocomplete-container">
-                            <input type="text" id="orders-customer-filter" placeholder="Todos los Clientes" autocomplete="off">
+                            <input type="text" id="orders-customer-filter" placeholder="Buscar por cliente..." autocomplete="off">
                             <div id="orders-customer-filter-results" class="autocomplete-results"></div>
                         </div>
                         <input type="hidden" id="orders-customer-filter-id">
@@ -135,10 +134,10 @@
             <div id="customers" class="tab-content">
                 <div class="header">
                     <h1>Clientes</h1>
-                    <div class="search-container">
-                        <input type="text" id="customers-search" placeholder="Buscar clientes...">
+                    <div class="standard-toolbar">
+                        <input type="text" id="customers-search" placeholder="Buscar por cliente...">
+                        <button id="add-customer-btn" class="btn-primary"><i class="fas fa-plus"></i> Nuevo Cliente</button>
                     </div>
-                    <button id="add-customer-btn" class="btn-primary"><i class="fas fa-plus"></i> Nuevo Cliente</button>
                 </div>
                 <div class="table-container">
                     <table>
@@ -160,10 +159,9 @@
             <div id="payments" class="tab-content">
                 <div class="header">
                     <h1>Pagos</h1>
-                    <div class="filter-bar">
-                        <label class="filter-title">Filtrar por:</label>
+                    <div class="standard-toolbar">
                         <div class="autocomplete-container">
-                             <input type="text" id="payments-customer-filter" placeholder="Todos los Clientes" autocomplete="off">
+                             <input type="text" id="payments-customer-filter" placeholder="Buscar por cliente..." autocomplete="off">
                              <div id="payments-customer-filter-results" class="autocomplete-results"></div>
                         </div>
                         <input type="hidden" id="payments-customer-filter-id">
@@ -192,10 +190,10 @@
             <div id="products" class="tab-content">
                 <div class="header">
                     <h1>Productos</h1>
-                    <div class="search-container">
-                        <input type="text" id="products-search" placeholder="Buscar productos...">
+                    <div class="standard-toolbar">
+                        <input type="text" id="products-search" placeholder="Buscar por producto...">
+                        <button id="add-product-btn" class="btn-primary"><i class="fas fa-plus"></i> Nuevo Producto</button>
                     </div>
-                    <button id="add-product-btn" class="btn-primary"><i class="fas fa-plus"></i> Nuevo Producto</button>
                 </div>
                 <div class="table-container">
                     <table>
@@ -215,6 +213,11 @@
             <div id="settings" class="tab-content">
                 <div class="header">
                     <h1>Configuración</h1>
+                    <div class="standard-toolbar">
+                        <button id="backup-data-btn" class="btn-secondary"><i class="fas fa-download"></i> Respaldar Datos (Excel)</button>
+                        <input type="file" id="restore-data-input" accept=".xlsx" style="display: none;">
+                        <button id="restore-data-btn" class="btn-secondary"><i class="fas fa-upload"></i> Restaurar Datos</button>
+                    </div>
                 </div>
                 <div class="settings-grid">
                     <div class="card">
@@ -231,12 +234,6 @@
                                 <tbody id="users-table-body"></tbody>
                             </table>
                         </div>
-                    </div>
-                    <div class="card">
-                        <h3>Gestión de Datos</h3>
-                        <button id="backup-data-btn" class="btn-secondary"><i class="fas fa-download"></i> Respaldar Datos (Excel)</button>
-                        <input type="file" id="restore-data-input" accept=".xlsx" style="display: none;">
-                        <button id="restore-data-btn" class="btn-secondary"><i class="fas fa-upload"></i> Restaurar Datos</button>
                     </div>
                 </div>
             </div>

@@ -192,29 +192,8 @@ body {
 }
 
 .header h1 {
-    margin-right: auto; /* Push other elements to the right */
-}
-
-.search-container {
-    flex-grow: 1;
-    max-width: 400px; /* Optional: constrain search bar width */
-}
-.search-container input {
-    width: 100%;
-    padding: 0.6rem;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-}
-
-.filters {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.filters label {
-    font-weight: 500;
-    color: var(--text-color-muted);
+    margin: 0;
+    margin-right: auto;
 }
 
 .tab-content {
@@ -386,46 +365,54 @@ th {
     list-style: none;
 }
 
-.filters {
+/* --- Standard Toolbar for Headers --- */
+.standard-toolbar {
     display: flex;
-    gap: 1rem;
-}
-.filters select, .filters input, .filters .btn-primary, .filters .autocomplete-container {
-    padding: 0.5rem;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    height: 40px; /* Consistent height */
-}
-
-.filters input, .filters select {
-    width: 150px; /* Or use flex-grow */
-}
-
-/* New Filter Bar Styles */
-.filter-bar {
-    display: flex;
-    align-items: end;
+    align-items: center;
     gap: 1rem;
     flex-grow: 1;
-    flex-wrap: wrap;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens before media query */
 }
 
-.filter-bar > * {
-    flex: 1 1 auto; /* Allow items to grow and shrink */
-    min-width: 150px; /* Prevent items from becoming too small */
+.standard-toolbar > * {
+    height: 40px;
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
 }
 
-.filter-bar .autocomplete-container {
-    flex-grow: 2; /* Give more space to the search bar */
+/* Specific overrides for direct children */
+.standard-toolbar > input,
+.standard-toolbar > select,
+.standard-toolbar > .autocomplete-container > input {
+    box-sizing: border-box; /* Include padding and border in the height */
+    border: 1px solid var(--border-color);
+    background-color: var(--surface-color);
 }
 
-.filter-bar .btn-primary {
-    flex-grow: 0; /* Don't allow the button to grow */
-    white-space: nowrap; /* Prevent button text from wrapping */
+.standard-toolbar > .btn-primary,
+.standard-toolbar > .btn-secondary {
+    padding: 0 1.2rem; /* Adjust padding for buttons */
+    line-height: 1; /* Helps with vertical alignment */
+    border: none; /* Override default button border if any */
 }
 
-.filter-bar label {
-    flex-shrink: 0; /* Prevent the label from shrinking */
+.standard-toolbar > input[type="text"] {
+    flex-grow: 1;
+    max-width: 400px; /* Prevent it from becoming too large */
+}
+
+.standard-toolbar > .autocomplete-container {
+    flex-grow: 1;
+    max-width: 400px;
+}
+
+.standard-toolbar label {
+    height: auto;
+    border: none;
+    padding: 0;
+    font-weight: 500;
+    color: var(--text-color-muted);
 }
 
 
@@ -642,12 +629,19 @@ th {
         padding-top: calc(var(--header-height) + 5rem); /* Adjust based on new fixed header height */
     }
 
-    .header .filters, .header .search-container {
+    .header .standard-toolbar {
+        flex-direction: column;
+        align-items: stretch;
         width: 100%;
     }
 
-    .header input {
+    .header .standard-toolbar > input,
+    .header .standard-toolbar > select,
+    .header .standard-toolbar > .btn-primary,
+    .header .standard-toolbar > .btn-secondary,
+    .header .standard-toolbar > .autocomplete-container {
         width: 100%;
+        max-width: none; /* Override max-width on mobile */
     }
 
     .dashboard-grid, .settings-grid {
