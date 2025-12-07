@@ -1,6 +1,7 @@
 import { initAuth, setupAuthForms, getCurrentUser } from './auth.js';
 import { fetchData, saveOrUpdate, deleteItem } from './services/firestore.js';
 import { setState, getState } from './state.js';
+import { showNotification } from './utils/notifications.js';
 import { setLanguage } from './utils/i18n.js';
 import { setupNavigation } from './ui/navigation.js';
 import { setupModals, openModal, closeModal } from './ui/modals.js';
@@ -70,6 +71,54 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('customer-form').addEventListener('submit', handleFormSubmit);
         document.getElementById('order-form').addEventListener('submit', handleFormSubmit);
         document.getElementById('payment-form').addEventListener('submit', handleFormSubmit);
+
+        // --- Payment Modal Logic ---
+        const paymentCustomerSelect = document.getElementById('payment-customer');
+        const paymentOrderSelect = document.getElementById('payment-order');
+        const paymentAmountInput = document.getElementById('payment-amount');
+
+        paymentCustomerSelect.addEventListener('change', () => {
+            const customerId = paymentCustomerSelect.value;
+            const { orders } = getState();
+            const pendingOrders = orders.filter(o => o.customerId === customerId && o.status !== 'Paid');
+
+            paymentOrderSelect.innerHTML = '<option value="">Seleccionar Pedido...</option>';
+            if (pendingOrders.length > 0) {
+                populateSelect('payment-order', pendingOrders, 'id', order => {
+                    const balance = order.total - (order.amountPaid || 0);
+                    return `Pedido del ${new Date(order.date).toLocaleDateString('es-ES')} - Saldo: $${balance.toFixed(2)}`;
+                });
+                paymentOrderSelect.disabled = false;
+            } else {
+                paymentOrderSelect.disabled = true;
+            }
+            paymentAmountInput.value = '';
+        });
+
+        paymentOrderSelect.addEventListener('change', () => {
+            const orderId = paymentOrderSelect.value;
+            if (!orderId) {
+                paymentAmountInput.value = '';
+                return;
+            }
+            const { orders } = getState();
+            const order = orders.find(o => o.id === orderId);
+            const balance = order.total - (order.amountPaid || 0);
+            paymentAmountInput.value = balance.toFixed(2);
+            paymentAmountInput.max = balance.toFixed(2);
+        });
+
+        paymentAmountInput.addEventListener('input', () => {
+            const maxAmount = parseFloat(paymentAmountInput.max);
+            let enteredAmount = parseFloat(paymentAmountInput.value);
+
+            if (isNaN(enteredAmount)) return;
+
+            if (enteredAmount > maxAmount) {
+                paymentAmountInput.value = maxAmount.toFixed(2);
+                showNotification('El monto no puede exceder el saldo pendiente.', 'warning');
+            }
+        });
     }
 
     function handleActionClick(e) {
@@ -106,6 +155,11 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('order-items-container').innerHTML = '';
             setupCustomerAutocomplete();
             addOrderItem();
+        } else if (type === 'payment') {
+            const { customers } = getState();
+            populateSelect('payment-customer', customers, 'id', 'name');
+            document.getElementById('payment-order').innerHTML = '<option value="">Seleccionar Pedido...</option>';
+            document.getElementById('payment-order').disabled = true;
         }
 
         openModal(`${type}-modal`);
@@ -222,6 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         await initApp();
         closeModal();
+        showNotification('Guardado con éxito!', 'success');
     }
 
     function handleEdit(id, type) {
@@ -309,8 +364,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function handleDelete(id, type) {
         if (confirm(`¿Estás seguro de que quieres eliminar este ${type}?`)) {
-            await deleteItem(`${type}s`, id);
-            await initApp();
+            try {
+                await deleteItem(`${type}s`, id);
+                await initApp();
+                showNotification('Elemento eliminado con éxito.', 'success');
+            } catch (error) {
+                showNotification(`Error al eliminar: ${error.message}`, 'error');
+            }
         }
     }
 
@@ -404,7 +464,7 @@ function handleWhatsApp(id, type, dataset) {
     }
 
     if (!customer || !customer.phone) {
-        alert('Este cliente no tiene un número de teléfono registrado.');
+        showNotification('Este cliente no tiene un número de teléfono registrado.', 'error');
         return;
     }
 
