@@ -1,11 +1,7 @@
 
-import { auth, db } from './firebase.js';
-import {
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    onAuthStateChanged,
-    signOut
-} from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+import { db } from './firebase.js';
+import { getCurrentUser, initializeAuth } from './auth.js';
+import { populateSelect } from './utils.js';
 import {
     collection,
     doc,
@@ -13,15 +9,12 @@ import {
     getDocs,
     updateDoc,
     deleteDoc,
-    query,
-    where,
     writeBatch
 } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- State ---
-    let currentUser = null;
     let listenersAttached = false;
     let products = [];
     let customers = [];
@@ -31,15 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let translations = {}; // Initialize translations object
 
     // --- DOM Elements ---
-    const authContainer = document.getElementById('auth-container');
-    const appContainer = document.getElementById('app-container');
     const menuToggle = document.getElementById('menu-toggle');
-    const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
-    const showRegister = document.getElementById('show-register');
-    const showLogin = document.getElementById('show-login');
-    const logoutBtn = document.getElementById('logout-btn');
-
     const navLinks = document.querySelectorAll('.nav-link');
     const tabs = document.querySelectorAll('.tab-content');
 
@@ -61,7 +46,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const usersTableBody = document.getElementById('users-table-body');
 
     // Search & Filters
-    const ordersSearch = document.getElementById('orders-search');
     const customersSearch = document.getElementById('customers-search');
     const productsSearch = document.getElementById('products-search');
     const ordersCustomerFilter = document.getElementById('orders-customer-filter');
@@ -87,7 +71,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Dashboard
     const dashboardMonthSelect = document.getElementById('dashboard-month');
     const dashboardYearSelect = document.getElementById('dashboard-year');
-    const pendingOrdersList = document.getElementById('pending-orders-list');
     let salesChart, productSalesChart, customerRankingChart;
 
     // --- I18n ---
@@ -138,54 +121,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Authentication ---
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            currentUser = user;
-            authContainer.classList.add('hidden');
-            appContainer.classList.remove('hidden');
-            await initApp();
-        } else {
-            currentUser = null;
-            authContainer.classList.remove('hidden');
-            appContainer.classList.add('hidden');
-            await setLanguage(navigator.language.split('-')[0] || 'es');
-        }
-    });
+    const onUserAuthenticated = async () => {
+        await initApp();
+    };
 
-    loginForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-        signInWithEmailAndPassword(auth, email, password)
-            .catch(error => alert(error.message));
-    });
+    const onUserSignedOut = async () => {
+        await setLanguage(navigator.language.split('-')[0] || 'es');
+    };
 
-    registerForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const email = document.getElementById('register-email').value;
-        const password = document.getElementById('register-password').value;
-        createUserWithEmailAndPassword(auth, email, password)
-             .then(userCredential => {
-                const user = userCredential.user;
-                // Add user to the 'users' collection
-                addDoc(collection(db, `users/${user.uid}/users`), {
-                    email: user.email,
-                    name: user.email.split('@')[0]
-                });
-            })
-            .catch(error => alert(error.message));
-    });
-
-    logoutBtn.addEventListener('click', () => signOut(auth));
-    showRegister.addEventListener('click', () => {
-        document.getElementById('login-view').classList.add('hidden');
-        document.getElementById('register-view').classList.remove('hidden');
-    });
-    showLogin.addEventListener('click', () => {
-        document.getElementById('login-view').classList.remove('hidden');
-        document.getElementById('register-view').classList.add('hidden');
-    });
+    initializeAuth(onUserAuthenticated, onUserSignedOut);
 
     const sidebar = document.querySelector('.sidebar');
     menuToggle.addEventListener('click', () => {
@@ -323,6 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- App Initialization ---
     async function initApp() {
+        const currentUser = getCurrentUser();
         if (!currentUser) return;
         await setLanguage('es'); // Default to Spanish
         await fetchData();
@@ -343,6 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Data Fetching ---
     async function fetchData() {
         try {
+            const currentUser = getCurrentUser();
             const userId = currentUser.uid;
             const collections = {
                 products: collection(db, `users/${userId}/products`),
@@ -516,7 +462,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const status = o.status || 'N/A';
             const statusClass = `status-${status.toLowerCase()}`;
-            const totalQuantity = items.reduce((sum, item) => sum + (parseInt(item.quantity) || 0), 0);
             const total = parseFloat(o.total);
             const amountPaid = parseFloat(o.amountPaid);
 
@@ -905,6 +850,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 reference: bankReferenceInput.value,
                 date: data.date
             };
+            const currentUser = getCurrentUser();
             await addDoc(collection(db, `users/${currentUser.uid}/payments`), paymentData);
         }
 
@@ -930,6 +876,8 @@ document.addEventListener('DOMContentLoaded', () => {
             reference: document.getElementById('payment-reference').value,
             date: localDate.toISOString()
         };
+
+        const currentUser = getCurrentUser();
 
         if (id) {
             // Logic to update an existing payment
@@ -965,6 +913,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function saveOrUpdate(collectionName, id, data) {
+        const currentUser = getCurrentUser();
         const collectionRef = collection(db, `users/${currentUser.uid}/${collectionName}`);
         if (id) {
             await updateDoc(doc(collectionRef, id), data);
@@ -982,6 +931,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const id = target.dataset.id;
         const type = target.dataset.type;
+        const currentUser = getCurrentUser();
 
         if (target.classList.contains('edit')) {
             handleEdit(id, type);
@@ -1138,6 +1088,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function restoreDataFromWorkbook(workbook) {
+        const currentUser = getCurrentUser();
         const userId = currentUser.uid;
         const sheetMap = {
             "Products": "products",
@@ -1450,21 +1401,5 @@ document.addEventListener('DOMContentLoaded', () => {
             const whatsappUrl = `https://wa.me/${customer.phone}?text=${encodeURIComponent(message)}`;
             window.open(whatsappUrl, '_blank');
         }
-    }
-
-
-    // --- Helpers ---
-    function populateSelect(selectId, data, valueKey, textKey, selectedValue) {
-        const select = document.getElementById(selectId);
-        select.innerHTML = '<option value="">Select...</option>';
-        data.forEach(item => {
-            const option = document.createElement('option');
-            option.value = item[valueKey];
-            option.textContent = item[textKey];
-            if (item[valueKey] === selectedValue) {
-                option.selected = true;
-            }
-            select.appendChild(option);
-        });
     }
 });
