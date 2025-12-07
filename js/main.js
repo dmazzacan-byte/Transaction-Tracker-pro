@@ -1,7 +1,7 @@
 import { initAuth, setupAuthForms, getCurrentUser } from './auth.js';
 import { fetchData, saveOrUpdate, deleteItem } from './services/firestore.js';
 import { setState, getState } from './state.js';
-import { setLanguage, t } from './utils/i18n.js';
+import { setLanguage } from './utils/i18n.js';
 import { setupNavigation } from './ui/navigation.js';
 import { setupModals, openModal, closeModal } from './ui/modals.js';
 import { renderAll, renderCustomers, renderProducts, renderOrders, renderPayments } from './ui/render.js';
@@ -86,7 +86,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const form = document.getElementById(`${type}-form`);
         form.reset();
         document.getElementById(`${type}-id`).value = '';
-        document.getElementById(`${type}-modal-title`).textContent = t(`new_${type}`);
+        const titleMap = {
+            product: 'Nuevo Producto',
+            customer: 'Nuevo Cliente',
+            order: 'Nuevo Pedido',
+            payment: 'Nuevo Pago'
+        };
+        document.getElementById(`${type}-modal-title`).textContent = titleMap[type];
 
         if(type === 'order') {
             document.getElementById('order-items-container').innerHTML = '';
@@ -213,6 +219,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleEdit(id, type) {
         const { products, customers, orders, payments } = getState();
         let item;
+        const titleMap = {
+            product: 'Editar Producto',
+            customer: 'Editar Cliente',
+            order: 'Editar Pedido',
+            payment: 'Editar Pago'
+        };
+
         switch(type) {
             case 'product':
                 item = products.find(i => i.id === id);
@@ -221,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('product-description').value = item.description;
                 document.getElementById('product-retail-price').value = item.retailPrice;
                 document.getElementById('product-wholesale-price').value = item.wholesalePrice;
-                document.getElementById('product-modal-title').textContent = t('edit_product');
+                document.getElementById('product-modal-title').textContent = titleMap[type];
                 openModal('product-modal');
                 break;
             case 'customer':
@@ -230,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('customer-id').value = item.id;
                 document.getElementById('customer-name').value = item.name;
                 document.getElementById('customer-phone').value = item.phone;
-                document.getElementById('customer-modal-title').textContent = t('edit_customer');
+                document.getElementById('customer-modal-title').textContent = titleMap[type];
                 openModal('customer-modal');
                 break;
             case 'order':
@@ -255,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateOrderTotal();
 
                 document.getElementById('order-status').value = item.status;
-                document.getElementById('order-modal-title').textContent = t('edit_order');
+                document.getElementById('order-modal-title').textContent = titleMap[type];
                 openModal('order-modal');
                 break;
             case 'payment':
@@ -280,14 +293,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                document.getElementById('payment-modal-title').textContent = t('edit_payment');
+                document.getElementById('payment-modal-title').textContent = titleMap[type];
                 openModal('payment-modal');
                 break;
         }
     }
 
     async function handleDelete(id, type) {
-        if (confirm(`Are you sure you want to delete this ${type}?`)) {
+        if (confirm(`¿Estás seguro de que quieres eliminar este ${type}?`)) {
             await deleteItem(`${type}s`, id);
             await initApp();
         }
@@ -307,11 +320,11 @@ function addOrderItem(item = {}) {
     const productOptions = sortedProducts.map(p => `<option value="${p.id}" ${p.id === item.productId ? 'selected' : ''}>${p.description}</option>`).join('');
 
     itemDiv.innerHTML = `
-        <select class="item-product" required>${productOptions}</select>
+        <select class="item-product" required><option value="">Seleccionar...</option>${productOptions}</select>
         <input type="number" class="item-quantity" value="${item.quantity || 1}" min="1" required>
         <select class="item-price-type">
-            <option value="retail" ${item.priceType === 'retail' ? 'selected' : ''}>${t('retail_price')}</option>
-            <option value="wholesale" ${item.priceType === 'wholesale' ? 'selected' : ''}>${t('wholesale_price')}</option>
+            <option value="retail" ${item.priceType === 'retail' ? 'selected' : ''}>Precio Detal</option>
+            <option value="wholesale" ${item.priceType === 'wholesale' ? 'selected' : ''}>Precio Mayorista</option>
         </select>
         <button type="button" class="action-btn delete remove-item-btn"><i class="fas fa-trash"></i></button>
     `;
@@ -354,12 +367,12 @@ function handlePay(id) {
     document.getElementById('payment-order-id').value = id;
 
     const paymentOrderSelect = document.getElementById('payment-order');
-    paymentOrderSelect.innerHTML = `<option value="${id}">Order #${id.substring(0,5)}</option>`;
+    paymentOrderSelect.innerHTML = `<option value="${id}">Pedido #${id.substring(0,5)}</option>`;
     paymentOrderSelect.disabled = true;
 
     const remaining = order.total - (order.amountPaid || 0);
     document.getElementById('payment-amount').value = remaining.toFixed(2);
-    document.getElementById('payment-modal-title').textContent = 'Register Payment';
+    document.getElementById('payment-modal-title').textContent = 'Registrar Pago';
     openModal('payment-modal');
 }
 
@@ -383,7 +396,7 @@ function handleWhatsApp(id, type, dataset) {
     }
 
     if (!customer || !customer.phone) {
-        alert(t('customer_has_no_phone'));
+        alert('Este cliente no tiene un número de teléfono registrado.');
         return;
     }
 
@@ -400,7 +413,7 @@ function handleWhatsApp(id, type, dataset) {
                 const product = products.find(p => p.id === item.productId);
                 return `• ${item.quantity} x ${product.description}`;
              }).join('\n');
-             message = `Pedido del ${new Date(order.date).toLocaleDateString()}:\n\n${itemsSummary}\n--------------------\nTotal: $${order.total.toFixed(2)}`;
+             message = `Pedido del ${new Date(order.date).toLocaleDateString('es-ES')}:\n\n${itemsSummary}\n--------------------\nTotal: $${order.total.toFixed(2)}`;
              break;
     }
 
@@ -444,11 +457,11 @@ function setupFilters() {
     });
 
     const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-    ordersMonthFilter.innerHTML = `<option value="">${t('all_months')}</option>` + months.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+    ordersMonthFilter.innerHTML = `<option value="">Todos los Meses</option>` + months.map((m, i) => `<option value="${i}">${m}</option>`).join('');
     ordersMonthFilter.value = new Date().getMonth();
 
     const currentYear = new Date().getFullYear();
-    let yearOptions = `<option value="">${t('all_years')}</option>`;
+    let yearOptions = `<option value="">Todos los Años</option>`;
     for (let i = currentYear; i >= currentYear - 5; i--) {
         yearOptions += `<option value="${i}">${i}</option>`;
     }
@@ -491,7 +504,7 @@ function setupFilters() {
         });
     });
 
-    paymentsMonthFilter.innerHTML = `<option value="">${t('all_months')}</option>` + months.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+    paymentsMonthFilter.innerHTML = `<option value="">Todos los Meses</option>` + months.map((m, i) => `<option value="${i}">${m}</option>`).join('');
     paymentsMonthFilter.value = new Date().getMonth();
     paymentsYearFilter.innerHTML = yearOptions;
     paymentsYearFilter.value = currentYear;

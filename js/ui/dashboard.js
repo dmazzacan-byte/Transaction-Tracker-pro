@@ -1,5 +1,4 @@
 import { getState } from '../state.js';
-import { t } from '../utils/i18n.js';
 
 let salesChart, productSalesChart, customerRankingChart;
 
@@ -12,7 +11,7 @@ export function setupDashboard() {
 }
 
 function populateDateFilters() {
-    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
     const currentMonth = new Date().getMonth();
     const select = document.getElementById('dashboard-month');
     select.innerHTML = months.map((m, i) => `<option value="${i}" ${i === currentMonth ? 'selected' : ''}>${m}</option>`).join('');
@@ -64,12 +63,12 @@ function renderSalesChart(filteredOrders, month, year) {
         data: {
             labels: labels,
             datasets: [{
-                label: t('daily_sales'),
+                label: 'Ventas Diarias',
                 data: salesData,
                 backgroundColor: 'rgba(0, 123, 255, 0.6)',
                 yAxisID: 'y',
             }, {
-                label: t('cumulative_sales'),
+                label: 'Ventas Acumuladas',
                 data: cumulativeSalesData,
                 type: 'line',
                 borderColor: 'rgba(40, 167, 69, 1)',
@@ -79,8 +78,8 @@ function renderSalesChart(filteredOrders, month, year) {
         options: {
             responsive: true,
             scales: {
-                y: { position: 'left', title: { display: true, text: t('daily_sales') }},
-                y1: { position: 'right', title: { display: true, text: t('cumulative_sales') }, grid: { drawOnChartArea: false } },
+                y: { position: 'left', title: { display: true, text: 'Ventas Diarias' }},
+                y1: { position: 'right', title: { display: true, text: 'Ventas Acumuladas' }, grid: { drawOnChartArea: false } },
             }
         }
     });
@@ -93,7 +92,7 @@ function renderProductSalesChart(filteredOrders) {
         if (Array.isArray(o.items)) {
             o.items.forEach(item => {
                 const product = products.find(p => p.id === item.productId);
-                const productName = product ? product.description : 'Unknown';
+                const productName = product ? product.description : 'Desconocido';
                 const itemTotal = item.price * item.quantity;
                 productSales[productName] = (productSales[productName] || 0) + itemTotal;
             });
@@ -135,7 +134,7 @@ function renderCustomerRankingChart(filteredOrders) {
     const { customers } = getState();
     const customerSales = {};
     filteredOrders.forEach(o => {
-        const customerName = customers.find(c => c.id === o.customerId)?.name || 'Unknown';
+        const customerName = customers.find(c => c.id === o.customerId)?.name || 'Desconocido';
         customerSales[customerName] = (customerSales[customerName] || 0) + o.total;
     });
 
@@ -148,7 +147,7 @@ function renderCustomerRankingChart(filteredOrders) {
         data: {
             labels: sortedCustomers.map(([name]) => name),
             datasets: [{
-                label: t('sales'),
+                label: 'Ventas',
                 data: sortedCustomers.map(([,total]) => total),
                 backgroundColor: '#28a745',
             }]
@@ -167,12 +166,12 @@ function renderPendingOrders(allOrders) {
 
     const cardHeader = tableBody.closest('.card')?.querySelector('h3');
     if (cardHeader) {
-        cardHeader.textContent = `${t('pending_payments')} ($${totalPending.toFixed(2)})`;
+        cardHeader.textContent = `Pagos Pendientes ($${totalPending.toFixed(2)})`;
     }
 
     tableBody.innerHTML = '';
     if (pending.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="4">${t('no_pending_payments')}</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="4">No hay pagos pendientes</td></tr>`;
         return;
     }
 
@@ -185,9 +184,9 @@ function renderPendingOrders(allOrders) {
             <tr>
                 <td>${customerName}</td>
                 <td>$${remaining.toFixed(2)}</td>
-                <td>${daysOld} ${t('days_old')}</td>
+                <td>${daysOld} días</td>
                 <td>
-                    <button class="action-btn whatsapp-btn" data-id="${o.customerId}" data-type="pending-payment" data-amount="${remaining.toFixed(2)}" data-days-old="${daysOld}" title="Send Reminder"><i class="fab fa-whatsapp"></i></button>
+                    <button class="action-btn whatsapp-btn" data-id="${o.customerId}" data-type="pending-payment" data-amount="${remaining.toFixed(2)}" data-days-old="${daysOld}" title="Enviar Recordatorio"><i class="fab fa-whatsapp"></i></button>
                 </td>
             </tr>
         `;

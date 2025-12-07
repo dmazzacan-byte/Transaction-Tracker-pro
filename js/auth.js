@@ -31,7 +31,7 @@ export function initAuth(loginCallback) {
             currentUser = null;
             authContainer.classList.remove('hidden');
             appContainer.classList.add('hidden');
-            await setLanguage(navigator.language.split('-')[0] || 'es');
+            await setLanguage('es');
         }
     });
 }
