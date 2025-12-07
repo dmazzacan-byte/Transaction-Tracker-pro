@@ -12,13 +12,14 @@ export function renderAll() {
 export function renderProducts(searchTerm = '') {
     const { products } = getState();
     const tableBody = document.getElementById('products-table-body');
-    tableBody.innerHTML = '';
+    if (!tableBody) return;
     const filtered = products.filter(p => p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()));
     filtered.sort((a, b) => (a.description || '').localeCompare(b.description || ''));
-    filtered.forEach(p => {
+
+    const rowsHtml = filtered.map(p => {
         const retailPrice = typeof p.retailPrice === 'number' ? p.retailPrice.toFixed(2) : '0.00';
         const wholesalePrice = typeof p.wholesalePrice === 'number' ? p.wholesalePrice.toFixed(2) : '0.00';
-        const row = `
+        return `
             <tr>
                 <td>${p.description || 'N/A'}</td>
                 <td>$${retailPrice}</td>
@@ -29,15 +30,15 @@ export function renderProducts(searchTerm = '') {
                 </td>
             </tr>
         `;
-        tableBody.innerHTML += row;
-    });
+    }).join('');
+
+    tableBody.innerHTML = rowsHtml;
 }
 
 export function renderCustomers(searchTerm = '') {
     const { customers, orders } = getState();
     const tableBody = document.getElementById('customers-table-body');
-    tableBody.innerHTML = '';
-    if (!customers) return;
+    if (!tableBody || !customers) return;
 
     const filtered = customers.filter(c => c && c.name && c.name.toLowerCase().includes(searchTerm.toLowerCase()));
     const currentMonth = new Date().getMonth();
@@ -45,7 +46,7 @@ export function renderCustomers(searchTerm = '') {
 
     filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
-    filtered.forEach(c => {
+    const rowsHtml = filtered.map(c => {
         const customerOrders = orders ? orders.filter(o => o && o.customerId === c.id) : [];
         const historicalVolume = customerOrders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
         const monthlyVolume = customerOrders
@@ -59,7 +60,7 @@ export function renderCustomers(searchTerm = '') {
             .filter(o => o.status !== 'Paid')
             .reduce((sum, o) => sum + ((parseFloat(o.total) || 0) - (parseFloat(o.amountPaid) || 0)), 0);
 
-        const row = `
+        return `
             <tr>
                 <td>${c.name || 'N/A'}</td>
                 <td>${c.phone || ''}</td>
@@ -73,15 +74,15 @@ export function renderCustomers(searchTerm = '') {
                 </td>
             </tr>
         `;
-        tableBody.innerHTML += row;
-    });
+    }).join('');
+
+    tableBody.innerHTML = rowsHtml;
 }
 
 export function renderOrders(searchTerm = '', customerId, month, year) {
     const { orders, customers, products } = getState();
     const tableBody = document.getElementById('orders-table-body');
-    tableBody.innerHTML = '';
-    if (!orders) return;
+    if (!tableBody || !orders) return;
 
     let filtered = orders.filter(o => {
         if (!o || !o.date) return false;
@@ -95,7 +96,7 @@ export function renderOrders(searchTerm = '', customerId, month, year) {
 
     filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    filtered.forEach(o => {
+    const rowsHtml = filtered.map(o => {
         const customer = customers.find(c => c && c.id === o.customerId)?.name || 'N/A';
         const items = Array.isArray(o.items) ? o.items : [];
         const itemsSummary = items.map(item => {
@@ -105,7 +106,7 @@ export function renderOrders(searchTerm = '', customerId, month, year) {
         const status = o.status || 'N/A';
         const statusClass = `status-${status.toLowerCase()}`;
 
-        const row = `
+        return `
             <tr>
                 <td>${new Date(o.date).toLocaleDateString()}</td>
                 <td>${customer}</td>
@@ -121,15 +122,15 @@ export function renderOrders(searchTerm = '', customerId, month, year) {
                 </td>
             </tr>
         `;
-        tableBody.innerHTML += row;
-    });
+    }).join('');
+
+    tableBody.innerHTML = rowsHtml;
 }
 
 export function renderPayments(customerId, month, year) {
     const { payments, orders, customers } = getState();
     const tableBody = document.getElementById('payments-table-body');
-    tableBody.innerHTML = '';
-    if (!payments) return;
+    if (!tableBody || !payments) return;
 
     let filtered = payments.filter(p => {
         if (!p || !p.date) return false;
@@ -146,12 +147,12 @@ export function renderPayments(customerId, month, year) {
 
     filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    filtered.forEach(p => {
+    const rowsHtml = filtered.map(p => {
         const order = orders.find(o => o && o.id === p.orderId);
         const customer = customers.find(c => c && c.id === order?.customerId)?.name || 'N/A';
         const orderId = order ? `Order #${order.id.substring(0, 5)}...` : 'N/A';
 
-        const row = `
+        return `
             <tr>
                 <td>${new Date(p.date).toLocaleDateString()}</td>
                 <td>${customer}</td>
@@ -164,8 +165,9 @@ export function renderPayments(customerId, month, year) {
                 </td>
             </tr>
         `;
-        tableBody.innerHTML += row;
-    });
+    }).join('');
+
+    tableBody.innerHTML = rowsHtml;
 }
 
 export function renderUsers() {
