@@ -1,7 +1,7 @@
 
 import { db } from './firebase.js';
 import { getCurrentUser, initializeAuth } from './auth.js';
-import { populateSelect } from './utils.js';
+import { populateSelect, showNotification } from './utils.js';
 import {
     collection,
     doc,
@@ -325,7 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
             users = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         } catch (error) {
             console.error("Error fetching data:", error);
-            alert(`Error fetching data: ${error.message}`);
+            showNotification(`Error fetching data: ${error.message}`, 'error');
         }
     }
 
@@ -682,6 +682,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectedOption = e.target.options[e.target.selectedIndex];
         const balance = selectedOption.dataset.balance;
         document.getElementById('payment-amount').value = balance || '';
+    });
+
+    document.getElementById('payment-amount').addEventListener('input', (e) => {
+        const amount = parseFloat(e.target.value);
+        const paymentOrderSelect = document.getElementById('payment-order');
+        const selectedOption = paymentOrderSelect.options[paymentOrderSelect.selectedIndex];
+
+        if (selectedOption && selectedOption.dataset.balance) {
+            const balance = parseFloat(selectedOption.dataset.balance);
+            if (amount > balance) {
+                e.target.value = balance;
+                showNotification('El monto del pago no puede exceder el saldo pendiente.', 'warning');
+            }
+        }
     });
 
 
@@ -1088,7 +1102,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (confirm("This will overwrite existing data. Are you sure?")) {
                 await restoreDataFromWorkbook(workbook);
-                alert("Data restored successfully!");
+                showNotification("Data restored successfully!", 'success');
                 await initApp();
             }
         };
@@ -1379,7 +1393,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (!customer || !customer.phone) {
-            alert(t('customer_has_no_phone'));
+            showNotification(t('customer_has_no_phone'), 'error');
             return;
         }
 

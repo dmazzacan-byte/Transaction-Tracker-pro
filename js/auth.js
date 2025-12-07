@@ -6,6 +6,7 @@ import {
     signOut
 } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 import { collection, addDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+import { showNotification } from './utils.js';
 
 let currentUser = null;
 
@@ -45,7 +46,7 @@ export function initializeAuth(onUserAuthenticated, onUserSignedOut) {
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
         signInWithEmailAndPassword(auth, email, password)
-            .catch(error => alert(error.message));
+            .catch(error => showNotification(error.message, 'error'));
     });
 
     registerForm.addEventListener('submit', (e) => {
@@ -61,7 +62,7 @@ export function initializeAuth(onUserAuthenticated, onUserSignedOut) {
                     name: user.email.split('@')[0] // Default name from email
                 });
             })
-            .catch(error => alert(error.message));
+            .catch(error => showNotification(error.message, 'error'));
     });
 
     logoutBtn.addEventListener('click', () => signOut(auth));
