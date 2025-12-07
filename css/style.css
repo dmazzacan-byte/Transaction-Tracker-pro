@@ -629,21 +629,19 @@ th {
         padding-top: calc(var(--header-height) + 5rem); /* Adjust based on new fixed header height */
     }
 
-    .header .filters, .header .search-container, .header .standard-toolbar {
-        width: 100%;
-    }
-
     .header .standard-toolbar {
         flex-direction: column;
-        align-items: stretch; /* Make items take full width */
-    }
-
-    .header .standard-toolbar > * {
+        align-items: stretch;
         width: 100%;
     }
 
-    .header input {
+    .header .standard-toolbar > input,
+    .header .standard-toolbar > select,
+    .header .standard-toolbar > .btn-primary,
+    .header .standard-toolbar > .btn-secondary,
+    .header .standard-toolbar > .autocomplete-container {
         width: 100%;
+        max-width: none; /* Override max-width on mobile */
     }
 
     .dashboard-grid, .settings-grid {
