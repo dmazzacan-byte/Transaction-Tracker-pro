@@ -1,0 +1,86 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - text: 
+  - navigation [ref=e3]:
+    - heading "TransactionTracker" [level=3] [ref=e5]
+    - list [ref=e6]:
+      - listitem [ref=e7]:
+        - link " Dashboard" [ref=e8] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e9]: 
+          - generic [ref=e10]: Dashboard
+      - listitem [ref=e11]:
+        - link " Pedidos" [ref=e12] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e13]: 
+          - generic [ref=e14]: Pedidos
+      - listitem [ref=e15]:
+        - link " Clientes" [ref=e16] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e17]: 
+          - generic [ref=e18]: Clientes
+      - listitem [ref=e19]:
+        - link " Pagos" [ref=e20] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e21]: 
+          - generic [ref=e22]: Pagos
+      - listitem [ref=e23]:
+        - link " Productos" [ref=e24] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e25]: 
+          - generic [ref=e26]: Productos
+      - listitem [ref=e27]:
+        - link " Configuración" [ref=e28] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e29]: 
+          - generic [ref=e30]: Configuración
+    - button " Cerrar Sesión" [ref=e32] [cursor=pointer]:
+      - generic [ref=e33]: 
+      - generic [ref=e34]: Cerrar Sesión
+  - main [ref=e35]:
+    - generic [ref=e36]:
+      - generic [ref=e37]:
+        - heading "Dashboard" [level=1] [ref=e38]
+        - generic [ref=e39]:
+          - generic [ref=e40]: "Mes:"
+          - combobox "Mes:" [ref=e41]:
+            - option "Enero"
+            - option "Febrero"
+            - option "Marzo"
+            - option "Abril"
+            - option "Mayo"
+            - option "Junio"
+            - option "Julio"
+            - option "Agosto"
+            - option "Septiembre"
+            - option "Octubre"
+            - option "Noviembre"
+            - option "Diciembre" [selected]
+          - generic [ref=e42]: "Año:"
+          - combobox "Año:" [ref=e43]:
+            - option "2025" [selected]
+            - option "2024"
+            - option "2023"
+            - option "2022"
+            - option "2021"
+            - option "2020"
+      - generic [ref=e44]:
+        - heading "Ventas Diarias" [level=3] [ref=e46]
+        - heading "Ventas por Producto" [level=3] [ref=e50]
+        - heading "Ranking de Clientes" [level=3] [ref=e54]
+        - generic [ref=e57]:
+          - heading "Pagos Pendientes ($0.00)" [level=3] [ref=e58]
+          - table [ref=e60]:
+            - rowgroup [ref=e61]:
+              - row "Cliente Monto Antigüedad Acciones" [ref=e62]:
+                - columnheader "Cliente" [ref=e63]
+                - columnheader "Monto" [ref=e64]
+                - columnheader "Antigüedad" [ref=e65]
+                - columnheader "Acciones" [ref=e66]
+            - rowgroup [ref=e67]:
+              - row "No hay pagos pendientes" [ref=e68]:
+                - cell "No hay pagos pendientes" [ref=e69]
+    - text: + + + +   
+```

@@ -377,9 +377,7 @@ th {
 .standard-toolbar > * {
     height: 40px;
     padding: 0.5rem;
-    border: 1px solid var(--border-color);
     border-radius: 4px;
-    background-color: var(--surface-color); /* Ensure consistent background */
     font-size: 0.9rem;
 }
 
@@ -388,12 +386,15 @@ th {
 .standard-toolbar > select,
 .standard-toolbar > .autocomplete-container > input {
     box-sizing: border-box; /* Include padding and border in the height */
+    border: 1px solid var(--border-color);
+    background-color: var(--surface-color);
 }
 
 .standard-toolbar > .btn-primary,
 .standard-toolbar > .btn-secondary {
     padding: 0 1.2rem; /* Adjust padding for buttons */
     line-height: 1; /* Helps with vertical alignment */
+    border: none; /* Override default button border if any */
 }
 
 .standard-toolbar > input[type="text"] {
