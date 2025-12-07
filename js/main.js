@@ -10,6 +10,17 @@ import { setupDashboard, updateDashboard } from './ui/dashboard.js';
 import { backupData, setupRestore } from './services/dataBackup.js';
 import { populateSelect } from './utils/helpers.js';
 
+// --- NUEVA FUNCIÓN DE UTILIDAD: Corrección de Zona Horaria ---
+// Esto asegura que la fecha seleccionada en el input (YYYY-MM-DD)
+// se guarde correctamente en Firestore sin desviarse por la zona horaria (UTC).
+function getLocalDateISO(dateString) {
+    if (!dateString) return null;
+    // Creamos la fecha a las 00:00:00 de la zona horaria local.
+    const date = new Date(dateString + 'T00:00:00');
+    return date.toISOString();
+}
+
+
 document.addEventListener('DOMContentLoaded', () => {
     let listenersAttached = false;
 
@@ -65,6 +76,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('add-customer-btn').addEventListener('click', () => handleAdd('customer'));
         document.getElementById('add-order-btn').addEventListener('click', () => handleAdd('order'));
         document.getElementById('add-payment-btn').addEventListener('click', () => handleAdd('payment'));
+        
+        // --- FIX 1.1: Permite crear cliente desde modal de Pedido ---
+        document.getElementById('add-customer-from-order-btn').addEventListener('click', () => {
+            closeModal('order-modal');
+            handleAdd('customer');
+        });
 
         // Forms
         document.getElementById('product-form').addEventListener('submit', handleFormSubmit);
@@ -72,7 +89,32 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('order-form').addEventListener('submit', handleFormSubmit);
         document.getElementById('payment-form').addEventListener('submit', handleFormSubmit);
 
-        // --- Payment Modal Logic ---
+        // --- FIX 1.2: Mostrar/Ocultar campos de pago en Pedido ---
+        document.getElementById('order-status').addEventListener('change', (e) => {
+            const status = e.target.value;
+            const paymentDetailsDiv = document.getElementById('order-payment-details');
+            const amountPaidInput = document.getElementById('order-amount-paid');
+            const totalDisplay = document.getElementById('order-total-display');
+            const total = parseFloat(totalDisplay.textContent.replace('$', ''));
+
+            const isPaymentRequired = status === 'Partial' || status === 'Paid';
+            paymentDetailsDiv.classList.toggle('hidden', !isPaymentRequired);
+
+            if (status === 'Paid') {
+                // Si es pagado, establece el monto pagado al total
+                amountPaidInput.value = total.toFixed(2);
+            } else if (status === 'Partial') {
+                // Si es parcial, asegura que el campo esté vacío para la entrada manual
+                amountPaidInput.value = '';
+            } else if (status === 'Pending') {
+                // Si es pendiente, limpia los campos (aunque estarán ocultos)
+                amountPaidInput.value = '';
+                document.getElementById('order-bank-reference').value = '';
+            }
+        });
+
+
+        // --- Lógica del Modal de Pagos ---
         const paymentCustomerSelect = document.getElementById('payment-customer');
         const paymentOrderSelect = document.getElementById('payment-order');
         const paymentAmountInput = document.getElementById('payment-amount');
@@ -83,22 +125,31 @@ document.addEventListener('DOMContentLoaded', () => {
             const pendingOrders = orders.filter(o => o.customerId === customerId && o.status !== 'Paid');
 
             paymentOrderSelect.innerHTML = '<option value="">Seleccionar Pedido...</option>';
+            paymentAmountInput.value = ''; // Limpiar el monto
+
             if (pendingOrders.length > 0) {
+                // Poblar select de pedidos
                 populateSelect('payment-order', pendingOrders, 'id', order => {
                     const balance = order.total - (order.amountPaid || 0);
                     return `Pedido del ${new Date(order.date).toLocaleDateString('es-ES')} - Saldo: $${balance.toFixed(2)}`;
                 });
                 paymentOrderSelect.disabled = false;
+                
+                // --- FIX 2: Seleccionar y forzar la actualización del primer pedido ---
+                const firstPendingOrderId = pendingOrders[0].id;
+                paymentOrderSelect.value = firstPendingOrderId;
+                paymentOrderSelect.dispatchEvent(new Event('change')); // Dispara el evento para calcular max/value
+
             } else {
                 paymentOrderSelect.disabled = true;
             }
-            paymentAmountInput.value = '';
         });
 
         paymentOrderSelect.addEventListener('change', () => {
             const orderId = paymentOrderSelect.value;
             if (!orderId) {
                 paymentAmountInput.value = '';
+                paymentAmountInput.removeAttribute('max');
                 return;
             }
             const { orders } = getState();
@@ -108,6 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
             paymentAmountInput.max = balance.toFixed(2);
         });
 
+        // La validación se mantiene, ya que fue parte del Paso 3.
         paymentAmountInput.addEventListener('input', () => {
             const maxAmount = parseFloat(paymentAmountInput.max);
             let enteredAmount = parseFloat(paymentAmountInput.value);
@@ -115,8 +167,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isNaN(enteredAmount)) return;
 
             if (enteredAmount > maxAmount) {
-                paymentAmountInput.value = maxAmount.toFixed(2);
+                // Solo muestra una advertencia, no sobreescribe el valor mientras el usuario teclea
                 showNotification('El monto no puede exceder el saldo pendiente.', 'warning');
+                // Podrías considerar ajustar el valor aquí si la UX lo requiere, pero es mejor hacerlo en 'blur' para no interrumpir
+                // paymentAmountInput.value = maxAmount.toFixed(2);
             }
         });
     }
@@ -153,6 +207,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if(type === 'order') {
             document.getElementById('order-items-container').innerHTML = '';
+            // Se ocultan los detalles de pago al crear un nuevo pedido
+            document.getElementById('order-payment-details').classList.add('hidden'); 
+            document.getElementById('order-status').value = 'Pending';
+            document.getElementById('order-total-display').textContent = '$0.00';
             setupCustomerAutocomplete();
             addOrderItem();
         } else if (type === 'payment') {
@@ -211,7 +269,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     amountPaid = parseFloat(document.getElementById('order-amount-paid').value) || 0;
                 }
 
-                const date = new Date(document.getElementById('order-date').value).toISOString();
+                // --- Corrección de Fecha (Zona Horaria) ---
+                const date = getLocalDateISO(document.getElementById('order-date').value);
 
                 data = {
                     customerId: document.getElementById('order-customer-id').value,
@@ -224,7 +283,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const orderId = await saveOrUpdate('orders', id, data);
 
-                if (amountPaid > 0) {
+                // Si es un nuevo pedido y tiene pago asociado, se registra el pago.
+                if (!id && amountPaid > 0) {
                     await saveOrUpdate('payments', null, {
                         orderId: orderId,
                         amount: amountPaid,
@@ -243,7 +303,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     orderId: orderId_payment,
                     amount,
                     reference: document.getElementById('payment-reference').value,
-                    date: new Date(document.getElementById('payment-date').value).toISOString(),
+                    // --- Corrección de Fecha (Zona Horaria) ---
+                    date: getLocalDateISO(document.getElementById('payment-date').value),
                 };
 
                 if (id) { // Existing payment
@@ -331,6 +392,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateOrderTotal();
 
                 document.getElementById('order-status').value = item.status;
+                // Al editar, forzar el disparo del evento de status para mostrar los campos de pago si aplica
+                document.getElementById('order-status').dispatchEvent(new Event('change')); 
+
                 document.getElementById('order-modal-title').textContent = titleMap[type];
                 openModal('order-modal');
                 break;
@@ -347,11 +411,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (associatedOrder) {
                     const customerOfOrder = customers.find(c => c.id === associatedOrder.customerId);
                     if (customerOfOrder) {
+                        // 1. Popula y selecciona el cliente
                         populateSelect('payment-customer', customers, 'id', 'name', customerOfOrder.id);
+                        // 2. Triggers change event on customer select (para poblar los pedidos)
                         document.getElementById('payment-customer').dispatchEvent(new Event('change'));
 
+                        // 3. FIX 3: Usar setTimeout para esperar que los pedidos se carguen y luego seleccionar y actualizar
                         setTimeout(() => {
                             document.getElementById('payment-order').value = item.orderId;
+                            // Forzar el evento de cambio para que se actualice el max y el valor del pago.
+                            document.getElementById('payment-order').dispatchEvent(new Event('change')); 
                         }, 100);
                     }
                 }
@@ -377,6 +446,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Init Auth ---
     initAuth(initApp);
 });
+
+// ... [El resto de las funciones auxiliares (addOrderItem, updateOrderTotal, handlePay, handleWhatsApp, setupFilters, setupCustomerAutocomplete) permanecen sin cambios] ...
 
 function addOrderItem(item = {}) {
     const container = document.getElementById('order-items-container');
