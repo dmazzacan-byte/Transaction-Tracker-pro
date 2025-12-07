@@ -1,5 +1,4 @@
 import { getState } from '../state.js';
-import { t } from '../utils/i18n.js';
 
 export function renderAll() {
     renderProducts();
@@ -25,8 +24,8 @@ export function renderProducts(searchTerm = '') {
                 <td>$${retailPrice}</td>
                 <td>$${wholesalePrice}</td>
                 <td>
-                    <button class="action-btn edit" data-id="${p.id}" data-type="product" title="Edit"><i class="fas fa-edit"></i></button>
-                    <button class="action-btn delete" data-id="${p.id}" data-type="product" title="Delete"><i class="fas fa-trash"></i></button>
+                    <button class="action-btn edit" data-id="${p.id}" data-type="product" title="Editar"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn delete" data-id="${p.id}" data-type="product" title="Eliminar"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>
         `;
@@ -68,9 +67,9 @@ export function renderCustomers(searchTerm = '') {
                 <td>$${(historicalVolume || 0).toFixed(2)}</td>
                 <td>$${(pendingAmount || 0).toFixed(2)}</td>
                 <td>
-                    <button class="action-btn edit" data-id="${c.id}" data-type="customer" title="${t('edit')}"><i class="fas fa-edit"></i></button>
-                    <button class="action-btn delete" data-id="${c.id}" data-type="customer" title="${t('delete')}"><i class="fas fa-trash"></i></button>
-                    <button class="action-btn whatsapp-btn" data-id="${c.id}" data-type="customer" data-pending-amount="${pendingAmount.toFixed(2)}" title="Send WhatsApp"><i class="fab fa-whatsapp"></i></button>
+                    <button class="action-btn edit" data-id="${c.id}" data-type="customer" title="Editar"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn delete" data-id="${c.id}" data-type="customer" title="Eliminar"><i class="fas fa-trash"></i></button>
+                    <button class="action-btn whatsapp-btn" data-id="${c.id}" data-type="customer" data-pending-amount="${pendingAmount.toFixed(2)}" title="Enviar WhatsApp"><i class="fab fa-whatsapp"></i></button>
                 </td>
             </tr>
         `;
@@ -96,6 +95,12 @@ export function renderOrders(searchTerm = '', customerId, month, year) {
 
     filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
 
+    const statusTranslations = {
+        pending: 'Pendiente',
+        partial: 'Parcial',
+        paid: 'Pagado'
+    };
+
     const rowsHtml = filtered.map(o => {
         const customer = customers.find(c => c && c.id === o.customerId)?.name || 'N/A';
         const items = Array.isArray(o.items) ? o.items : [];
@@ -105,20 +110,21 @@ export function renderOrders(searchTerm = '', customerId, month, year) {
         }).join('<br>');
         const status = o.status || 'N/A';
         const statusClass = `status-${status.toLowerCase()}`;
+        const translatedStatus = statusTranslations[status.toLowerCase()] || status;
 
         return `
             <tr>
-                <td>${new Date(o.date).toLocaleDateString()}</td>
+                <td>${new Date(o.date).toLocaleDateString('es-ES')}</td>
                 <td>${customer}</td>
                 <td>${itemsSummary}</td>
                 <td>$${(parseFloat(o.total) || 0).toFixed(2)}</td>
                 <td>$${(parseFloat(o.amountPaid) || 0).toFixed(2)}</td>
-                <td><span class="status ${statusClass}">${t(status.toLowerCase())}</span></td>
+                <td><span class="status ${statusClass}">${translatedStatus}</span></td>
                 <td>
-                    <button class="action-btn edit" data-id="${o.id}" data-type="order" title="${t('edit')}"><i class="fas fa-edit"></i></button>
-                    <button class="action-btn delete" data-id="${o.id}" data-type="order" title="${t('delete')}"><i class="fas fa-trash"></i></button>
-                    <button class="action-btn pay" data-id="${o.id}" data-type="order" title="${t('pay')}"><i class="fas fa-dollar-sign"></i></button>
-                    <button class="action-btn whatsapp-btn" data-id="${o.id}" data-type="order" title="Send WhatsApp"><i class="fab fa-whatsapp"></i></button>
+                    <button class="action-btn edit" data-id="${o.id}" data-type="order" title="Editar"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn delete" data-id="${o.id}" data-type="order" title="Eliminar"><i class="fas fa-trash"></i></button>
+                    <button class="action-btn pay" data-id="${o.id}" data-type="order" title="Pagar"><i class="fas fa-dollar-sign"></i></button>
+                    <button class="action-btn whatsapp-btn" data-id="${o.id}" data-type="order" title="Enviar WhatsApp"><i class="fab fa-whatsapp"></i></button>
                 </td>
             </tr>
         `;
@@ -150,18 +156,18 @@ export function renderPayments(customerId, month, year) {
     const rowsHtml = filtered.map(p => {
         const order = orders.find(o => o && o.id === p.orderId);
         const customer = customers.find(c => c && c.id === order?.customerId)?.name || 'N/A';
-        const orderId = order ? `Order #${order.id.substring(0, 5)}...` : 'N/A';
+        const orderId = order ? `Pedido #${order.id.substring(0, 5)}...` : 'N/A';
 
         return `
             <tr>
-                <td>${new Date(p.date).toLocaleDateString()}</td>
+                <td>${new Date(p.date).toLocaleDateString('es-ES')}</td>
                 <td>${customer}</td>
                 <td>${orderId}</td>
                 <td>$${(parseFloat(p.amount) || 0).toFixed(2)}</td>
                 <td>${p.reference || ''}</td>
                 <td>
-                    <button class="action-btn edit" data-id="${p.id}" data-type="payment" title="${t('edit')}"><i class="fas fa-edit"></i></button>
-                    <button class="action-btn delete" data-id="${p.id}" data-type="payment" title="${t('delete')}"><i class="fas fa-trash"></i></button>
+                    <button class="action-btn edit" data-id="${p.id}" data-type="payment" title="Editar"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn delete" data-id="${p.id}" data-type="payment" title="Eliminar"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>
         `;
@@ -180,7 +186,7 @@ export function renderUsers() {
                 <td>${u.name || u.email.split('@')[0]}</td>
                 <td>${u.email}</td>
                 <td>
-                     <button class="action-btn delete" data-id="${u.id}" data-type="user" title="Delete"><i class="fas fa-trash"></i></button>
+                     <button class="action-btn delete" data-id="${u.id}" data-type="user" title="Eliminar"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>
         `;
