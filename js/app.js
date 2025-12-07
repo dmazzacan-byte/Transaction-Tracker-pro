@@ -339,13 +339,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderProducts(searchTerm = '') {
-        productsTableBody.innerHTML = '';
-        const filteredProducts = products.filter(p => p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()));
-        filteredProducts.sort((a, b) => (a.description || '').localeCompare(b.description || ''));
-        filteredProducts.forEach(p => {
+        const filteredProducts = products
+            .filter(p => p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()))
+            .sort((a, b) => (a.description || '').localeCompare(b.description || ''));
+
+        const productsHTML = filteredProducts.map(p => {
             const retailPrice = typeof p.retailPrice === 'number' ? p.retailPrice.toFixed(2) : '0.00';
             const wholesalePrice = typeof p.wholesalePrice === 'number' ? p.wholesalePrice.toFixed(2) : '0.00';
-            const row = `
+            return `
                 <tr>
                     <td>${p.description || 'N/A'}</td>
                     <td>$${retailPrice}</td>
@@ -356,22 +357,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     </td>
                 </tr>
             `;
-            productsTableBody.innerHTML += row;
-        });
+        }).join('');
+
+        productsTableBody.innerHTML = productsHTML;
     }
 
-     function renderCustomers(searchTerm = '') {
-        customersTableBody.innerHTML = '';
-        if (!customers) return;
+    function renderCustomers(searchTerm = '') {
+        if (!customers) {
+            customersTableBody.innerHTML = '';
+            return;
+        }
 
-        const filteredCustomers = customers.filter(c => c && c.name && c.name.toLowerCase().includes(searchTerm.toLowerCase()));
         const currentMonth = new Date().getMonth();
         const currentYear = new Date().getFullYear();
 
-        // Sort alphabetically by name
-        filteredCustomers.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        const filteredCustomers = customers
+            .filter(c => c && c.name && c.name.toLowerCase().includes(searchTerm.toLowerCase()))
+            .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
-        filteredCustomers.forEach(c => {
+        const customersHTML = filteredCustomers.map(c => {
             const customerOrders = orders ? orders.filter(o => o && o.customerId === c.id) : [];
 
             const historicalVolume = customerOrders.reduce((sum, o) => {
@@ -383,7 +387,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 .filter(o => {
                     if (!o.date) return false;
                     const orderDate = new Date(o.date);
-                    // Check for valid date
                     return !isNaN(orderDate.getTime()) && orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
                 })
                 .reduce((sum, o) => {
@@ -399,7 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return sum + (total - amountPaid);
                 }, 0);
 
-            const row = `
+            return `
                 <tr>
                     <td>${c.name || 'N/A'}</td>
                     <td>${c.phone || ''}</td>
@@ -413,13 +416,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     </td>
                 </tr>
             `;
-            customersTableBody.innerHTML += row;
-        });
+        }).join('');
+
+        customersTableBody.innerHTML = customersHTML;
     }
 
     function renderOrders(searchTerm = '', customerId, month, year) {
-        ordersTableBody.innerHTML = '';
-        if (!orders) return;
+        if (!orders) {
+            ordersTableBody.innerHTML = '';
+            return;
+        }
 
         let filteredOrders = orders.filter(o => {
             if (!o || !o.date) return false;
@@ -451,7 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         filteredOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        filteredOrders.forEach(o => {
+        const ordersHTML = filteredOrders.map(o => {
             const customer = customers.find(c => c && c.id === o.customerId)?.name || 'N/A';
             const items = Array.isArray(o.items) ? o.items : [];
             const itemsSummary = items.map(item => {
@@ -465,7 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const total = parseFloat(o.total);
             const amountPaid = parseFloat(o.amountPaid);
 
-            const row = `
+            return `
                 <tr>
                     <td>${new Date(o.date).toLocaleDateString()}</td>
                     <td>${customer}</td>
@@ -481,13 +487,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     </td>
                 </tr>
             `;
-            ordersTableBody.innerHTML += row;
-        });
+        }).join('');
+
+        ordersTableBody.innerHTML = ordersHTML;
     }
 
     function renderPayments(customerId, month, year) {
-        paymentsTableBody.innerHTML = '';
-        if (!payments) return;
+        if (!payments) {
+            paymentsTableBody.innerHTML = '';
+            return;
+        }
 
         let filteredPayments = payments.filter(p => {
             if (!p || !p.date) return false;
@@ -496,9 +505,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (customerId) {
-            // Find all orders belonging to the customer
             const customerOrderIds = new Set(orders.filter(o => o.customerId === customerId).map(o => o.id));
-            // Filter payments that are linked to one of those orders
             filteredPayments = filteredPayments.filter(p => customerOrderIds.has(p.orderId));
         }
         if (month) {
@@ -510,13 +517,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         filteredPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        filteredPayments.forEach(p => {
+        const paymentsHTML = filteredPayments.map(p => {
             const order = orders.find(o => o && o.id === p.orderId);
             const customer = customers.find(c => c && c.id === order?.customerId)?.name || 'N/A';
             const orderId = order ? `Order #${order.id.substring(0, 5)}...` : 'N/A';
             const amount = parseFloat(p.amount);
 
-            const row = `
+            return `
                 <tr>
                     <td>${new Date(p.date).toLocaleDateString()}</td>
                     <td>${customer}</td>
@@ -529,8 +536,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     </td>
                 </tr>
             `;
-            paymentsTableBody.innerHTML += row;
-        });
+        }).join('');
+
+        paymentsTableBody.innerHTML = paymentsHTML;
     }
 
     function renderUsers() {
