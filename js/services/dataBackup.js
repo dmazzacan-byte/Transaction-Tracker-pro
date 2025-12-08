@@ -30,26 +30,39 @@ export function backupData() {
         phone,
     }));
 
-    // 3. Orders: Make items a readable JSON string for reliable restore
-    const backupOrders = orders.map(order => {
-        const itemsJson = JSON.stringify(
-            (Array.isArray(order.items) ? order.items : []).map(item => ({
-                productName: productMap.get(item.productId) || 'Unknown Product',
-                quantity: item.quantity,
-                priceType: item.priceType,
-                price: item.price,
-            }))
-        );
-
-        return {
+    // 3. Orders: Flatten items into separate rows for human readability
+    const backupOrders = [];
+    orders.forEach(order => {
+        const commonData = {
             customerName: customerMap.get(order.customerId) || 'Unknown Customer',
             date: formatDate(order.date),
-            items: itemsJson, // Storing as a JSON string
             total: order.total,
             status: order.status,
             amountPaid: order.amountPaid || 0,
         };
+
+        if (Array.isArray(order.items) && order.items.length > 0) {
+            order.items.forEach(item => {
+                backupOrders.push({
+                    ...commonData,
+                    productName: productMap.get(item.productId) || 'Unknown Product',
+                    quantity: item.quantity,
+                    priceType: item.priceType,
+                    price: item.price,
+                });
+            });
+        } else {
+            // Handle orders with no items
+            backupOrders.push({
+                ...commonData,
+                productName: '',
+                quantity: 0,
+                priceType: '',
+                price: 0,
+            });
+        }
     });
+
 
     // 4. Payments: Make order reference more specific
     const backupPayments = payments.map(payment => {

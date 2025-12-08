@@ -104,57 +104,70 @@ export async function restoreData(data) {
     const finalBatch = writeBatch(db);
 
     // --- 4. Restore Orders (with reverse lookup and duplicate check) ---
-    const existingOrders = existingData.orders.map(o => {
+    // Group rows from Excel back into single orders
+    const groupedOrders = data.orders.reduce((acc, row) => {
+        const orderKey = `${row.customerName}-${row.date}-${row.total.toFixed(2)}`;
+        if (!acc[orderKey]) {
+            acc[orderKey] = {
+                customerName: row.customerName,
+                date: row.date,
+                total: row.total,
+                status: row.status,
+                amountPaid: row.amountPaid,
+                items: [],
+            };
+        }
+        acc[orderKey].items.push({
+            productName: row.productName,
+            quantity: row.quantity,
+            priceType: row.priceType,
+            price: row.price,
+        });
+        return acc;
+    }, {});
+
+    const existingOrderKeys = new Set(existingData.orders.map(o => {
         const customerName = existingData.customers.find(c => c.id === o.customerId)?.name || '';
         const orderDate = new Date(o.date).toISOString().split('T')[0];
         return `${customerName}-${orderDate}-${o.total.toFixed(2)}`;
-    });
+    }));
 
-    for (const order of data.orders) {
-        const orderKey = `${order.customerName}-${order.date}-${parseFloat(order.total).toFixed(2)}`;
-        if (existingOrders.includes(orderKey)) {
+    for (const orderKey in groupedOrders) {
+        if (existingOrderKeys.has(orderKey)) {
             continue; // Skip duplicate
         }
 
-        const customerId = customerMap.get(order.customerName.toLowerCase());
+        const orderData = groupedOrders[orderKey];
+        const customerId = customerMap.get(orderData.customerName.toLowerCase());
         if (!customerId) {
-            console.warn(`Skipping order for unknown customer: ${order.customerName}`);
+            console.warn(`Skipping order for unknown customer: ${orderData.customerName}`);
             continue;
         }
 
-        // Reconstruct items array
-        let items = [];
-        try {
-            const parsedItems = JSON.parse(order.items);
-            if (Array.isArray(parsedItems)) {
-                items = parsedItems.map(item => {
-                    const productId = productMap.get(item.productName.toLowerCase());
-                    if (!productId) {
-                        throw new Error(`Product "${item.productName}" not found for order.`);
-                    }
-                    return {
-                        productId,
-                        quantity: item.quantity,
-                        priceType: item.priceType,
-                        price: item.price
-                    };
-                });
+        const items = orderData.items.map(item => {
+            const productId = productMap.get(item.productName.toLowerCase());
+            if (!productId) {
+                throw new Error(`Product "${item.productName}" not found for order.`);
             }
-        } catch (e) {
-            console.error("Could not parse items for order:", order, e);
-            continue; // Skip if items are malformed
-        }
+            return {
+                productId,
+                quantity: item.quantity,
+                priceType: item.priceType,
+                price: item.price
+            };
+        });
 
         const newOrderRef = doc(collection(db, `users/${user.uid}/orders`));
         finalBatch.set(newOrderRef, {
             customerId,
-            date: new Date(order.date).toISOString(),
+            date: new Date(orderData.date).toISOString(),
             items,
-            total: order.total,
-            status: order.status,
-            amountPaid: order.amountPaid || 0,
+            total: orderData.total,
+            status: orderData.status,
+            amountPaid: orderData.amountPaid || 0,
         });
     }
+
 
     // --- 5. Restore Payments (with reverse lookup and duplicate check) ---
     // Re-fetch orders to include newly added ones for payment mapping
