@@ -226,7 +226,8 @@ document.addEventListener('DOMContentLoaded', () => {
             amountPaid = parseFloat(document.getElementById('order-amount-paid').value) || 0;
         }
 
-        const date = new Date(document.getElementById('order-date').value).toISOString();
+        const dateValue = document.getElementById('order-date').value;
+        const date = new Date(`${dateValue}T00:00:00`).toISOString();
 
         const data = {
             customerId: document.getElementById('order-customer-id').value,
@@ -262,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
             orderId: orderId_payment,
             amount,
             reference: document.getElementById('payment-reference').value,
-            date: new Date(document.getElementById('payment-date').value).toISOString(),
+            date: new Date(`${document.getElementById('payment-date').value}T00:00:00`).toISOString(),
         };
 
         if (id) { // Existing payment
@@ -520,7 +521,8 @@ function handleWhatsApp(id, type, dataset) {
 
     switch (type) {
         case 'pending-payment':
-            message = `Hola, te recuerdo que tienes un pago pendiente por $${dataset.amount}. Gracias!`;
+            const firstName = customer.name.split(' ')[0];
+            message = `Hola ${firstName}, espero que estés muy bien. Te recuerdo que tienes un pago pendiente de $${dataset.amount} y ya han transcurrido ${dataset.daysOld} días desde la entrega del pedido. Gracias.`;
             break;
         case 'customer':
             message = `Saldo: ${dataset.pendingAmount}`;
