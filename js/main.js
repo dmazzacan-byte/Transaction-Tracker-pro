@@ -72,6 +72,18 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('payment-form').addEventListener('submit', handleFormSubmit);
 
         // Special handlers
+        setupPaymentCustomerAutocomplete();
+        document.getElementById('add-item-btn').addEventListener('click', addOrderItem);
+
+        document.getElementById('order-status').addEventListener('change', (e) => {
+            const paymentDetails = document.getElementById('order-payment-details');
+            if (e.target.value === 'Partial' || e.target.value === 'Paid') {
+                paymentDetails.classList.remove('hidden');
+            } else {
+                paymentDetails.classList.add('hidden');
+            }
+        });
+
         document.getElementById('add-customer-from-order-btn').addEventListener('click', () => {
             const form = document.getElementById('customer-form');
             form.reset();
@@ -79,36 +91,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('customer-modal-title').textContent = 'Nuevo Cliente';
             form.dataset.source = 'order-modal'; // Mark the source
             openModal('customer-modal');
-        });
-
-        document.getElementById('payment-customer').addEventListener('change', (e) => {
-            const customerId = e.target.value;
-            const { orders } = getState();
-            const paymentOrderSelect = document.getElementById('payment-order');
-
-            if (!customerId) {
-                paymentOrderSelect.innerHTML = '<option value="">Seleccione un cliente primero</option>';
-                paymentOrderSelect.disabled = true;
-                return;
-            }
-
-            const pendingOrders = orders.filter(o => o.customerId === customerId && o.status !== 'Paid');
-
-            if (pendingOrders.length === 0) {
-                paymentOrderSelect.innerHTML = '<option value="">Sin pedidos pendientes</option>';
-                paymentOrderSelect.disabled = true;
-                return;
-            }
-
-            paymentOrderSelect.innerHTML = '<option value="">Seleccione un pedido</option>';
-            pendingOrders.forEach(order => {
-                const balance = order.total - (order.amountPaid || 0);
-                const option = document.createElement('option');
-                option.value = order.id;
-                option.textContent = `Pedido del ${new Date(order.date).toLocaleDateString('es-ES')} - Saldo: $${balance.toFixed(2)}`;
-                paymentOrderSelect.appendChild(option);
-            });
-            paymentOrderSelect.disabled = false;
         });
     }
 
@@ -151,11 +133,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (type === 'payment') {
             document.getElementById('payment-date').value = new Date().toISOString().split('T')[0];
-            const { customers } = getState();
-            populateSelect('payment-customer', customers, 'id', 'name', '', 'Seleccione un cliente');
+            document.getElementById('payment-customer-search').value = '';
+            document.getElementById('payment-customer-id').value = '';
+            document.getElementById('payment-customer-search').disabled = false;
             document.getElementById('payment-order').innerHTML = '<option value="">Seleccione un cliente primero</option>';
             document.getElementById('payment-order').disabled = true;
-
         }
 
         openModal(`${type}-modal`);
@@ -376,12 +358,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (associatedOrder) {
                     const customerOfOrder = customers.find(c => c.id === associatedOrder.customerId);
                     if (customerOfOrder) {
-                        populateSelect('payment-customer', customers, 'id', 'name', customerOfOrder.id);
-                        document.getElementById('payment-customer').dispatchEvent(new Event('change'));
+                        const searchInput = document.getElementById('payment-customer-search');
+                        const customerIdInput = document.getElementById('payment-customer-id');
 
+                        searchInput.value = customerOfOrder.name;
+                        customerIdInput.value = customerOfOrder.id;
+
+                        updatePendingOrdersForCustomer(customerOfOrder.id);
+
+                        // A small delay to allow the autocomplete/order population to process
                         setTimeout(() => {
                             document.getElementById('payment-order').value = item.orderId;
-                        }, 100);
+                        }, 50);
                     }
                 }
 
@@ -451,19 +439,39 @@ function updateOrderTotal() {
 }
 
 function handlePay(id) {
-    const { orders } = getState();
+    const { orders, customers } = getState();
     const order = orders.find(o => o.id === id);
     if (!order) return;
 
+    // Reset form and set hidden values
     document.getElementById('payment-form').reset();
-    document.getElementById('payment-order-id').value = id;
+    document.getElementById('payment-id').value = '';
+    document.getElementById('payment-order-id').value = id; // Store the real order ID
 
+    // Set current date
+    document.getElementById('payment-date').value = new Date().toISOString().split('T')[0];
+
+    // Populate and select customer
+    const customer = customers.find(c => c.id === order.customerId);
+    if (customer) {
+        document.getElementById('payment-customer-search').value = customer.name;
+        document.getElementById('payment-customer-id').value = customer.id;
+        document.getElementById('payment-customer-search').disabled = true;
+        updatePendingOrdersForCustomer(customer.id);
+    }
+
+    // Set the value of the dropdown after a short delay to ensure options are populated
     const paymentOrderSelect = document.getElementById('payment-order');
-    paymentOrderSelect.innerHTML = `<option value="${id}">Pedido #${id.substring(0,5)}</option>`;
+    setTimeout(() => {
+        paymentOrderSelect.value = order.id;
+    }, 50);
     paymentOrderSelect.disabled = true;
 
-    const remaining = order.total - (order.amountPaid || 0);
-    document.getElementById('payment-amount').value = remaining.toFixed(2);
+    // Set remaining amount
+    const balance = order.total - (order.amountPaid || 0);
+    document.getElementById('payment-amount').value = balance.toFixed(2);
+
+    // Final UI touches
     document.getElementById('payment-modal-title').textContent = 'Registrar Pago';
     openModal('payment-modal');
 }
@@ -516,8 +524,6 @@ function handleWhatsApp(id, type, dataset) {
 }
 
 function setupFilters() {
-    const { customers } = getState();
-
     // Orders filter
     const ordersCustomerFilter = document.getElementById('orders-customer-filter');
     const ordersCustomerFilterId = document.getElementById('orders-customer-filter-id');
@@ -526,6 +532,7 @@ function setupFilters() {
     const ordersResultsContainer = document.getElementById('orders-customer-filter-results');
 
     ordersCustomerFilter.addEventListener('input', () => {
+        const { customers } = getState(); // Get fresh data
         const searchTerm = ordersCustomerFilter.value.toLowerCase();
         if (!searchTerm) {
             ordersResultsContainer.innerHTML = '';
@@ -574,6 +581,7 @@ function setupFilters() {
     const paymentsResultsContainer = document.getElementById('payments-customer-filter-results');
 
     paymentsCustomerFilter.addEventListener('input', () => {
+        const { customers } = getState(); // Get fresh data
         const searchTerm = paymentsCustomerFilter.value.toLowerCase();
         if (!searchTerm) {
             paymentsResultsContainer.innerHTML = '';
@@ -618,13 +626,80 @@ function setupFilters() {
     });
 }
 
+function updatePendingOrdersForCustomer(customerId) {
+    const paymentOrderSelect = document.getElementById('payment-order');
+    const { orders } = getState(); // Get fresh data
+
+    if (!customerId) {
+        paymentOrderSelect.innerHTML = '<option value="">Seleccione un cliente primero</option>';
+        paymentOrderSelect.disabled = true;
+        return;
+    }
+
+    const pendingOrders = orders.filter(o => o.customerId === customerId && o.status !== 'Paid');
+
+    if (pendingOrders.length === 0) {
+        paymentOrderSelect.innerHTML = '<option value="">Sin pedidos pendientes</option>';
+        paymentOrderSelect.disabled = true;
+        return;
+    }
+
+    paymentOrderSelect.innerHTML = '<option value="">Seleccione un pedido</option>';
+    pendingOrders.forEach(order => {
+        const balance = order.total - (order.amountPaid || 0);
+        const option = document.createElement('option');
+        option.value = order.id;
+        option.textContent = `Pedido del ${new Date(order.date).toLocaleDateString('es-ES')} - Saldo: $${balance.toFixed(2)}`;
+        paymentOrderSelect.appendChild(option);
+    });
+    paymentOrderSelect.disabled = false;
+}
+
+function setupPaymentCustomerAutocomplete() {
+    const searchInput = document.getElementById('payment-customer-search');
+    const resultsContainer = document.getElementById('payment-customer-autocomplete-results');
+    const customerIdInput = document.getElementById('payment-customer-id');
+
+    searchInput.addEventListener('input', () => {
+        const { customers } = getState(); // Get fresh data
+        const searchTerm = searchInput.value.toLowerCase();
+        customerIdInput.value = '';
+        updatePendingOrdersForCustomer(null);
+
+        if (!searchTerm) {
+            resultsContainer.innerHTML = '';
+            return;
+        }
+
+        const filtered = customers.filter(c => c.name.toLowerCase().includes(searchTerm));
+        resultsContainer.innerHTML = '';
+        filtered.forEach(customer => {
+            const div = document.createElement('div');
+            div.textContent = customer.name;
+            div.addEventListener('click', () => {
+                searchInput.value = customer.name;
+                customerIdInput.value = customer.id;
+                resultsContainer.innerHTML = '';
+                updatePendingOrdersForCustomer(customer.id);
+            });
+            resultsContainer.appendChild(div);
+        });
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!resultsContainer.contains(e.target) && e.target !== searchInput) {
+            resultsContainer.innerHTML = '';
+        }
+    });
+}
+
 function setupCustomerAutocomplete() {
     const searchInput = document.getElementById('order-customer-search');
     const resultsContainer = document.getElementById('customer-autocomplete-results');
     const customerIdInput = document.getElementById('order-customer-id');
-    const { customers } = getState();
 
     searchInput.addEventListener('input', () => {
+        const { customers } = getState(); // Get fresh data
         const searchTerm = searchInput.value.toLowerCase();
         if (!searchTerm) {
             resultsContainer.innerHTML = '';
