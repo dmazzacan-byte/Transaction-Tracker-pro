@@ -364,12 +364,30 @@ document.addEventListener('DOMContentLoaded', () => {
                         searchInput.value = customerOfOrder.name;
                         customerIdInput.value = customerOfOrder.id;
 
-                        updatePendingOrdersForCustomer(customerOfOrder.id);
+                        const paymentOrderSelect = document.getElementById('payment-order');
 
-                        // A small delay to allow the autocomplete/order population to process
-                        setTimeout(() => {
-                            document.getElementById('payment-order').value = item.orderId;
-                        }, 50);
+                        // Calculate the balance *at the time of the payment* for historical accuracy
+                        // This requires finding all payments for the order up to the date of the payment being edited.
+                        const paymentsForOrder = payments
+                            .filter(p => p.orderId === associatedOrder.id && new Date(p.date) <= new Date(item.date))
+                            .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                        let amountPaidBeforeThis = 0;
+                        for(const p of paymentsForOrder) {
+                            if(p.id === item.id) break;
+                            amountPaidBeforeThis += p.amount;
+                        }
+
+                        // The balance shown should be the balance just before this payment was made.
+                        const balanceAtTimeOfPayment = associatedOrder.total - amountPaidBeforeThis;
+
+                        const optionText = `Pedido del ${new Date(associatedOrder.date).toLocaleDateString('es-ES')} - Saldo: $${balanceAtTimeOfPayment.toFixed(2)}`;
+
+                        // Create and select the option
+                        paymentOrderSelect.innerHTML = `<option value="${associatedOrder.id}">${optionText}</option>`;
+                        paymentOrderSelect.value = associatedOrder.id;
+                        paymentOrderSelect.disabled = true; // Disable as it shouldn't be changed
+                        document.getElementById('payment-customer-search').disabled = true;
                     }
                 }
 
