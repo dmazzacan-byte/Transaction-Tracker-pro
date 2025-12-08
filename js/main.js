@@ -70,6 +70,28 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('customer-form').addEventListener('submit', handleFormSubmit);
         document.getElementById('order-form').addEventListener('submit', handleFormSubmit);
         document.getElementById('payment-form').addEventListener('submit', handleFormSubmit);
+
+        // Special handlers
+        setupPaymentCustomerAutocomplete();
+        document.getElementById('add-item-btn').addEventListener('click', addOrderItem);
+
+        document.getElementById('order-status').addEventListener('change', (e) => {
+            const paymentDetails = document.getElementById('order-payment-details');
+            if (e.target.value === 'Partial' || e.target.value === 'Paid') {
+                paymentDetails.classList.remove('hidden');
+            } else {
+                paymentDetails.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('add-customer-from-order-btn').addEventListener('click', () => {
+            const form = document.getElementById('customer-form');
+            form.reset();
+            document.getElementById('customer-id').value = '';
+            document.getElementById('customer-modal-title').textContent = 'Nuevo Cliente';
+            form.dataset.source = 'order-modal'; // Mark the source
+            openModal('customer-modal');
+        });
     }
 
     function handleActionClick(e) {
@@ -106,6 +128,16 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('order-items-container').innerHTML = '';
             setupCustomerAutocomplete();
             addOrderItem();
+            document.getElementById('order-date').value = new Date().toISOString().split('T')[0];
+        }
+
+        if (type === 'payment') {
+            document.getElementById('payment-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('payment-customer-search').value = '';
+            document.getElementById('payment-customer-id').value = '';
+            document.getElementById('payment-customer-search').disabled = false;
+            document.getElementById('payment-order').innerHTML = '<option value="">Seleccione un cliente primero</option>';
+            document.getElementById('payment-order').disabled = true;
         }
 
         openModal(`${type}-modal`);
@@ -113,115 +145,149 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function handleFormSubmit(e) {
         e.preventDefault();
-        const formId = e.target.id;
-        const type = formId.split('-')[0];
-        const id = document.getElementById(`${type}-id`).value;
-        let data = {};
+        const form = e.target;
+        const formId = form.id;
 
-        switch(type) {
-            case 'product':
-                data = {
-                    description: document.getElementById('product-description').value,
-                    retailPrice: parseFloat(document.getElementById('product-retail-price').value) || 0,
-                    wholesalePrice: parseFloat(document.getElementById('product-wholesale-price').value) || 0,
-                };
+        switch(formId) {
+            case 'product-form':
+                await handleProductForm(form);
                 break;
-            case 'customer':
-                data = {
-                    name: document.getElementById('customer-name').value,
-                    phone: document.getElementById('customer-phone').value,
-                };
+            case 'customer-form':
+                await handleCustomerForm(form);
                 break;
-            case 'order':
-                const items = [];
-                let total = 0;
-                document.querySelectorAll('#order-items-container .item').forEach(itemDiv => {
-                    const productId = itemDiv.querySelector('.item-product').value;
-                    const quantity = parseInt(itemDiv.querySelector('.item-quantity').value);
-                    const priceType = itemDiv.querySelector('.item-price-type').value;
-                    const { products } = getState();
-                    const product = products.find(p => p.id === productId);
-
-                    if (product && quantity > 0) {
-                        const price = priceType === 'wholesale' ? product.wholesalePrice : product.retailPrice;
-                        items.push({ productId, quantity, priceType, price });
-                        total += price * quantity;
-                    }
-                });
-
-                const status = document.getElementById('order-status').value;
-                let amountPaid = 0;
-                if (status === 'Paid') {
-                    amountPaid = total;
-                } else if (status === 'Partial') {
-                    amountPaid = parseFloat(document.getElementById('order-amount-paid').value) || 0;
-                }
-
-                const date = new Date(document.getElementById('order-date').value).toISOString();
-
-                data = {
-                    customerId: document.getElementById('order-customer-id').value,
-                    items,
-                    total,
-                    status,
-                    amountPaid,
-                    date,
-                };
-
-                const orderId = await saveOrUpdate('orders', id, data);
-
-                if (amountPaid > 0) {
-                    await saveOrUpdate('payments', null, {
-                        orderId: orderId,
-                        amount: amountPaid,
-                        reference: document.getElementById('order-bank-reference').value,
-                        date: date,
-                    });
-                }
+            case 'order-form':
+                await handleOrderForm(form);
                 break;
-            case 'payment':
-                const orderId_payment = document.getElementById('payment-order-id').value || document.getElementById('payment-order').value;
-                const amount = parseFloat(document.getElementById('payment-amount').value);
-                const { orders, payments } = getState();
-                const order = orders.find(o => o.id === orderId_payment);
-
-                data = {
-                    orderId: orderId_payment,
-                    amount,
-                    reference: document.getElementById('payment-reference').value,
-                    date: new Date(document.getElementById('payment-date').value).toISOString(),
-                };
-
-                if (id) { // Existing payment
-                    const oldPayment = payments.find(p => p.id === id);
-                    const amountDifference = amount - oldPayment.amount;
-                    await saveOrUpdate('payments', id, data);
-                    if (order) {
-                        const newAmountPaid = (order.amountPaid || 0) + amountDifference;
-                        await saveOrUpdate('orders', order.id, {
-                            amountPaid: newAmountPaid,
-                            status: newAmountPaid >= order.total ? 'Paid' : 'Partial'
-                        });
-                    }
-                } else { // New payment
-                    await saveOrUpdate('payments', null, data);
-                    if (order) {
-                        const newAmountPaid = (order.amountPaid || 0) + amount;
-                        await saveOrUpdate('orders', order.id, {
-                            amountPaid: newAmountPaid,
-                            status: newAmountPaid >= order.total ? 'Paid' : 'Partial'
-                        });
-                    }
-                }
+            case 'payment-form':
+                await handlePaymentForm(form);
                 break;
         }
+    }
 
-        if (type !== 'order' && type !== 'payment') {
-             await saveOrUpdate(`${type}s`, id, data);
-        }
-
+    async function handleProductForm(form) {
+        const id = form.querySelector('#product-id').value;
+        const data = {
+            description: form.querySelector('#product-description').value,
+            retailPrice: parseFloat(form.querySelector('#product-retail-price').value) || 0,
+            wholesalePrice: parseFloat(form.querySelector('#product-wholesale-price').value) || 0,
+        };
+        await saveOrUpdate('products', id, data);
         await initApp();
-        closeModal();
+        closeModal('product-modal');
+    }
+
+    async function handleCustomerForm(form) {
+        const id = form.querySelector('#customer-id').value;
+        const data = {
+            name: form.querySelector('#customer-name').value,
+            phone: form.querySelector('#customer-phone').value,
+        };
+        const newCustomerId = await saveOrUpdate('customers', id, data);
+
+        if (form.dataset.source === 'order-modal') {
+            await initApp(); // Refresh data to get the new customer
+            const { customers } = getState();
+            const newCustomer = customers.find(c => c.id === newCustomerId);
+            if (newCustomer) {
+                document.getElementById('order-customer-search').value = newCustomer.name;
+                document.getElementById('order-customer-id').value = newCustomer.id;
+            }
+            form.removeAttribute('data-source');
+            closeModal('customer-modal');
+        } else {
+            await initApp();
+            closeModal('customer-modal');
+        }
+    }
+
+    async function handleOrderForm(form) {
+        const id = form.querySelector('#order-id').value;
+        const items = [];
+        let total = 0;
+        document.querySelectorAll('#order-items-container .item').forEach(itemDiv => {
+            const productId = itemDiv.querySelector('.item-product').value;
+            const quantity = parseInt(itemDiv.querySelector('.item-quantity').value);
+            const priceType = itemDiv.querySelector('.item-price-type').value;
+            const { products } = getState();
+            const product = products.find(p => p.id === productId);
+
+            if (product && quantity > 0) {
+                const price = priceType === 'wholesale' ? product.wholesalePrice : product.retailPrice;
+                items.push({ productId, quantity, priceType, price });
+                total += price * quantity;
+            }
+        });
+
+        const status = document.getElementById('order-status').value;
+        let amountPaid = 0;
+        if (status === 'Paid') {
+            amountPaid = total;
+        } else if (status === 'Partial') {
+            amountPaid = parseFloat(document.getElementById('order-amount-paid').value) || 0;
+        }
+
+        const date = new Date(document.getElementById('order-date').value).toISOString();
+
+        const data = {
+            customerId: document.getElementById('order-customer-id').value,
+            items,
+            total,
+            status,
+            amountPaid,
+            date,
+        };
+
+        const orderId = await saveOrUpdate('orders', id, data);
+
+        if (amountPaid > 0) {
+            await saveOrUpdate('payments', null, {
+                orderId: orderId,
+                amount: amountPaid,
+                reference: document.getElementById('order-bank-reference').value,
+                date: date,
+            });
+        }
+        await initApp();
+        closeModal('order-modal');
+    }
+
+    async function handlePaymentForm(form) {
+        const id = form.querySelector('#payment-id').value;
+        const orderId_payment = document.getElementById('payment-order-id').value || document.getElementById('payment-order').value;
+        const amount = parseFloat(document.getElementById('payment-amount').value);
+        const { orders, payments } = getState();
+        const order = orders.find(o => o.id === orderId_payment);
+
+        const data = {
+            orderId: orderId_payment,
+            amount,
+            reference: document.getElementById('payment-reference').value,
+            date: new Date(document.getElementById('payment-date').value).toISOString(),
+        };
+
+        if (id) { // Existing payment
+            const oldPayment = payments.find(p => p.id === id);
+            const amountDifference = amount - oldPayment.amount;
+            await saveOrUpdate('payments', id, data);
+            if (order) {
+                const newAmountPaid = (order.amountPaid || 0) + amountDifference;
+                await saveOrUpdate('orders', order.id, {
+                    amountPaid: newAmountPaid,
+                    status: newAmountPaid >= order.total ? 'Paid' : 'Partial'
+                });
+            }
+        } else { // New payment
+            await saveOrUpdate('payments', null, data);
+            if (order) {
+                const newAmountPaid = (order.amountPaid || 0) + amount;
+                await saveOrUpdate('orders', order.id, {
+                    amountPaid: newAmountPaid,
+                    status: newAmountPaid >= order.total ? 'Paid' : 'Partial'
+                });
+            }
+        }
+        await initApp();
+        closeModal('payment-modal');
     }
 
     function handleEdit(id, type) {
@@ -292,12 +358,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (associatedOrder) {
                     const customerOfOrder = customers.find(c => c.id === associatedOrder.customerId);
                     if (customerOfOrder) {
-                        populateSelect('payment-customer', customers, 'id', 'name', customerOfOrder.id);
-                        document.getElementById('payment-customer').dispatchEvent(new Event('change'));
+                        const searchInput = document.getElementById('payment-customer-search');
+                        const customerIdInput = document.getElementById('payment-customer-id');
 
-                        setTimeout(() => {
-                            document.getElementById('payment-order').value = item.orderId;
-                        }, 100);
+                        searchInput.value = customerOfOrder.name;
+                        customerIdInput.value = customerOfOrder.id;
+
+                        const paymentOrderSelect = document.getElementById('payment-order');
+
+                        // Calculate the balance *at the time of the payment* for historical accuracy
+                        // This requires finding all payments for the order up to the date of the payment being edited.
+                        const paymentsForOrder = payments
+                            .filter(p => p.orderId === associatedOrder.id && new Date(p.date) <= new Date(item.date))
+                            .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                        let amountPaidBeforeThis = 0;
+                        for(const p of paymentsForOrder) {
+                            if(p.id === item.id) break;
+                            amountPaidBeforeThis += p.amount;
+                        }
+
+                        // The balance shown should be the balance just before this payment was made.
+                        const balanceAtTimeOfPayment = associatedOrder.total - amountPaidBeforeThis;
+
+                        const optionText = `Pedido del ${new Date(associatedOrder.date).toLocaleDateString('es-ES')} - Saldo: $${balanceAtTimeOfPayment.toFixed(2)}`;
+
+                        // Create and select the option
+                        paymentOrderSelect.innerHTML = `<option value="${associatedOrder.id}">${optionText}</option>`;
+                        paymentOrderSelect.value = associatedOrder.id;
+                        paymentOrderSelect.disabled = true; // Disable as it shouldn't be changed
+                        document.getElementById('payment-customer-search').disabled = true;
                     }
                 }
 
@@ -367,19 +457,39 @@ function updateOrderTotal() {
 }
 
 function handlePay(id) {
-    const { orders } = getState();
+    const { orders, customers } = getState();
     const order = orders.find(o => o.id === id);
     if (!order) return;
 
+    // Reset form and set hidden values
     document.getElementById('payment-form').reset();
-    document.getElementById('payment-order-id').value = id;
+    document.getElementById('payment-id').value = '';
+    document.getElementById('payment-order-id').value = id; // Store the real order ID
 
+    // Set current date
+    document.getElementById('payment-date').value = new Date().toISOString().split('T')[0];
+
+    // Populate and select customer
+    const customer = customers.find(c => c.id === order.customerId);
+    if (customer) {
+        document.getElementById('payment-customer-search').value = customer.name;
+        document.getElementById('payment-customer-id').value = customer.id;
+        document.getElementById('payment-customer-search').disabled = true;
+        updatePendingOrdersForCustomer(customer.id);
+    }
+
+    // Set the value of the dropdown after a short delay to ensure options are populated
     const paymentOrderSelect = document.getElementById('payment-order');
-    paymentOrderSelect.innerHTML = `<option value="${id}">Pedido #${id.substring(0,5)}</option>`;
+    setTimeout(() => {
+        paymentOrderSelect.value = order.id;
+    }, 50);
     paymentOrderSelect.disabled = true;
 
-    const remaining = order.total - (order.amountPaid || 0);
-    document.getElementById('payment-amount').value = remaining.toFixed(2);
+    // Set remaining amount
+    const balance = order.total - (order.amountPaid || 0);
+    document.getElementById('payment-amount').value = balance.toFixed(2);
+
+    // Final UI touches
     document.getElementById('payment-modal-title').textContent = 'Registrar Pago';
     openModal('payment-modal');
 }
@@ -432,8 +542,6 @@ function handleWhatsApp(id, type, dataset) {
 }
 
 function setupFilters() {
-    const { customers } = getState();
-
     // Orders filter
     const ordersCustomerFilter = document.getElementById('orders-customer-filter');
     const ordersCustomerFilterId = document.getElementById('orders-customer-filter-id');
@@ -442,6 +550,7 @@ function setupFilters() {
     const ordersResultsContainer = document.getElementById('orders-customer-filter-results');
 
     ordersCustomerFilter.addEventListener('input', () => {
+        const { customers } = getState(); // Get fresh data
         const searchTerm = ordersCustomerFilter.value.toLowerCase();
         if (!searchTerm) {
             ordersResultsContainer.innerHTML = '';
@@ -490,6 +599,7 @@ function setupFilters() {
     const paymentsResultsContainer = document.getElementById('payments-customer-filter-results');
 
     paymentsCustomerFilter.addEventListener('input', () => {
+        const { customers } = getState(); // Get fresh data
         const searchTerm = paymentsCustomerFilter.value.toLowerCase();
         if (!searchTerm) {
             paymentsResultsContainer.innerHTML = '';
@@ -534,13 +644,80 @@ function setupFilters() {
     });
 }
 
+function updatePendingOrdersForCustomer(customerId) {
+    const paymentOrderSelect = document.getElementById('payment-order');
+    const { orders } = getState(); // Get fresh data
+
+    if (!customerId) {
+        paymentOrderSelect.innerHTML = '<option value="">Seleccione un cliente primero</option>';
+        paymentOrderSelect.disabled = true;
+        return;
+    }
+
+    const pendingOrders = orders.filter(o => o.customerId === customerId && o.status !== 'Paid');
+
+    if (pendingOrders.length === 0) {
+        paymentOrderSelect.innerHTML = '<option value="">Sin pedidos pendientes</option>';
+        paymentOrderSelect.disabled = true;
+        return;
+    }
+
+    paymentOrderSelect.innerHTML = '<option value="">Seleccione un pedido</option>';
+    pendingOrders.forEach(order => {
+        const balance = order.total - (order.amountPaid || 0);
+        const option = document.createElement('option');
+        option.value = order.id;
+        option.textContent = `Pedido del ${new Date(order.date).toLocaleDateString('es-ES')} - Saldo: $${balance.toFixed(2)}`;
+        paymentOrderSelect.appendChild(option);
+    });
+    paymentOrderSelect.disabled = false;
+}
+
+function setupPaymentCustomerAutocomplete() {
+    const searchInput = document.getElementById('payment-customer-search');
+    const resultsContainer = document.getElementById('payment-customer-autocomplete-results');
+    const customerIdInput = document.getElementById('payment-customer-id');
+
+    searchInput.addEventListener('input', () => {
+        const { customers } = getState(); // Get fresh data
+        const searchTerm = searchInput.value.toLowerCase();
+        customerIdInput.value = '';
+        updatePendingOrdersForCustomer(null);
+
+        if (!searchTerm) {
+            resultsContainer.innerHTML = '';
+            return;
+        }
+
+        const filtered = customers.filter(c => c.name.toLowerCase().includes(searchTerm));
+        resultsContainer.innerHTML = '';
+        filtered.forEach(customer => {
+            const div = document.createElement('div');
+            div.textContent = customer.name;
+            div.addEventListener('click', () => {
+                searchInput.value = customer.name;
+                customerIdInput.value = customer.id;
+                resultsContainer.innerHTML = '';
+                updatePendingOrdersForCustomer(customer.id);
+            });
+            resultsContainer.appendChild(div);
+        });
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!resultsContainer.contains(e.target) && e.target !== searchInput) {
+            resultsContainer.innerHTML = '';
+        }
+    });
+}
+
 function setupCustomerAutocomplete() {
     const searchInput = document.getElementById('order-customer-search');
     const resultsContainer = document.getElementById('customer-autocomplete-results');
     const customerIdInput = document.getElementById('order-customer-id');
-    const { customers } = getState();
 
     searchInput.addEventListener('input', () => {
+        const { customers } = getState(); // Get fresh data
         const searchTerm = searchInput.value.toLowerCase();
         if (!searchTerm) {
             resultsContainer.innerHTML = '';

@@ -315,10 +315,14 @@
             <form id="payment-form">
                 <input type="hidden" id="payment-id">
                 <input type="hidden" id="payment-order-id">
+                <input type="hidden" id="payment-customer-id">
                 <label for="payment-date">Fecha:</label>
                 <input type="date" id="payment-date" required>
-                <label for="payment-customer">Cliente:</label>
-                <select id="payment-customer" required></select>
+                <label for="payment-customer-search">Cliente:</label>
+                <div class="autocomplete-container">
+                    <input type="text" id="payment-customer-search" required autocomplete="off">
+                    <div id="payment-customer-autocomplete-results" class="autocomplete-results"></div>
+                </div>
                 <label for="payment-order">Pedido:</label>
                 <select id="payment-order" required disabled></select>
                 <label for="payment-amount">Monto:</label>
