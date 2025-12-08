@@ -1,10 +1,17 @@
-import { getState } from '../state.js';
+import { getState, setState } from '../state.js';
+import { setupProfitabilityTable, renderProfitabilityTable } from './profitability.js';
+import { getProfitabilityForMonth } from '../services/profitability.js';
 
 let salesChart, productSalesChart, customerRankingChart;
 
 export function setupDashboard() {
     populateDateFilters();
     updateDashboard();
+
+    const month = parseInt(document.getElementById('dashboard-month').value);
+    const year = parseInt(document.getElementById('dashboard-year').value);
+    setupProfitabilityTable(year, month);
+
 
     document.getElementById('dashboard-month').addEventListener('change', updateDashboard);
     document.getElementById('dashboard-year').addEventListener('change', updateDashboard);
@@ -25,10 +32,15 @@ function populateDateFilters() {
     yearSelect.innerHTML = yearOptions;
 }
 
-export function updateDashboard() {
-    const { orders } = getState();
+export async function updateDashboard() {
     const month = parseInt(document.getElementById('dashboard-month').value);
     const year = parseInt(document.getElementById('dashboard-year').value);
+
+    const profitability = await getProfitabilityForMonth(year, month);
+    setState({ profitability });
+    setupProfitabilityTable(year, month);
+
+    const { orders } = getState();
 
     const filteredOrders = orders.filter(o => {
         const orderDate = new Date(o.date);
@@ -39,6 +51,7 @@ export function updateDashboard() {
     renderProductSalesChart(filteredOrders);
     renderPendingOrders(orders);
     renderCustomerRankingChart(filteredOrders);
+    renderProfitabilityTable();
 }
 
 function renderSalesChart(filteredOrders, month, year) {
