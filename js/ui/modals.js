@@ -9,7 +9,25 @@ export function openModal(modalId, callback = null) {
     onModalCloseCallback = callback;
 }
 
-export function closeModal() {
+export function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+
+    // Hide backdrop only if no other modals are visible
+    const anyModalVisible = document.querySelector('.modal:not(.hidden)');
+    if (!anyModalVisible) {
+        document.getElementById('modal-backdrop').classList.add('hidden');
+    }
+
+    if (onModalCloseCallback) {
+        onModalCloseCallback();
+        onModalCloseCallback = null;
+    }
+}
+
+export function closeAllModals() {
     document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
     document.getElementById('modal-backdrop').classList.add('hidden');
     if (onModalCloseCallback) {
@@ -19,8 +37,8 @@ export function closeModal() {
 }
 
 export function setupModals() {
-    document.getElementById('modal-backdrop').addEventListener('click', closeModal);
+    document.getElementById('modal-backdrop').addEventListener('click', closeAllModals);
     document.querySelectorAll('.modal .close-btn').forEach(btn => {
-        btn.addEventListener('click', closeModal);
+        btn.addEventListener('click', closeAllModals);
     });
 }
