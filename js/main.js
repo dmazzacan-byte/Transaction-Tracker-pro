@@ -9,6 +9,9 @@ import { setupDashboard, updateDashboard } from './ui/dashboard.js';
 import { backupData, setupRestore } from './services/dataBackup.js';
 import { populateSelect } from './utils/helpers.js';
 
+// Registrar plugins de Chart.js globalmente
+Chart.register(ChartDataLabels);
+
 document.addEventListener('DOMContentLoaded', () => {
     let listenersAttached = false;
 

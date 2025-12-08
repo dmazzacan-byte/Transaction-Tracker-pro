@@ -299,8 +299,8 @@ th {
     grid-template-areas:
         "daily-sales daily-sales"
         "customer-ranking customer-ranking"
-        "product-sales profitability"
-        "pending-debts pending-debts";
+        "product-sales pending-debts"
+        "profitability profitability";
     grid-template-columns: 1fr 1fr;
     grid-auto-rows: auto;
     gap: 2rem;
