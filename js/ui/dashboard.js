@@ -127,16 +127,27 @@ function renderProductSalesChart(filteredOrders) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'left' },
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    enabled: false
+                },
                 datalabels: {
                     formatter: (value, ctx) => {
                         const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
                         if (total === 0) {
-                            return '0%';
+                            return null;
                         }
-                        return (value / total * 100).toFixed(2) + "%";
+                        const percentage = ((value / total) * 100).toFixed(2) + "%";
+                        const label = ctx.chart.data.labels[ctx.dataIndex];
+                        return `${label}\n$${value.toFixed(2)}\n(${percentage})`;
                     },
                     color: '#fff',
+                    textAlign: 'center',
+                    font: {
+                        weight: 'bold'
+                    }
                 }
             }
         }
