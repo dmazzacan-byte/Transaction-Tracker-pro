@@ -521,7 +521,7 @@ function handleWhatsApp(id, type, dataset) {
     switch (type) {
         case 'pending-payment':
             const firstName = customer.name.split(' ')[0];
-            message = `Hola ${firstName}, espero que estés muy bien. Te recuerdo que tienes un pago pendiente de $${dataset.amount} y ya han transcurrido ${dataset.age} días desde la entrega del pedido. Gracias.`;
+            message = `Hola ${firstName}, espero que estés muy bien. Te recuerdo que tienes un pago pendiente de $${dataset.amount} y ya han transcurrido ${dataset.daysOld} días desde la entrega del pedido. Gracias.`;
             break;
         case 'customer':
             message = `Saldo: ${dataset.pendingAmount}`;
