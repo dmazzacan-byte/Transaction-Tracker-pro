@@ -93,6 +93,11 @@ function renderSalesChart(filteredOrders, month, year) {
             scales: {
                 y: { position: 'left', title: { display: true, text: 'Ventas Diarias' }},
                 y1: { position: 'right', title: { display: true, text: 'Ventas Acumuladas' }, grid: { drawOnChartArea: false } },
+            },
+            plugins: {
+                datalabels: {
+                    display: false // Ocultar etiquetas en este gráfico
+                }
             }
         }
     });
@@ -176,7 +181,23 @@ function renderCustomerRankingChart(filteredOrders) {
                 backgroundColor: '#28a745',
             }]
         },
-        options: { responsive: true, indexAxis: 'y' }
+        options: {
+            responsive: true,
+            indexAxis: 'y',
+            plugins: {
+                datalabels: {
+                    anchor: 'end',
+                    align: 'end',
+                    formatter: (value) => `$${value.toFixed(2)}`,
+                    color: 'white',
+                    textShadowColor: 'black',
+                    textShadowBlur: 4,
+                    font: {
+                        weight: 'bold'
+                    }
+                }
+            }
+        }
     });
 }
 
