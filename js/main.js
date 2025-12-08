@@ -226,7 +226,8 @@ document.addEventListener('DOMContentLoaded', () => {
             amountPaid = parseFloat(document.getElementById('order-amount-paid').value) || 0;
         }
 
-        const date = new Date(document.getElementById('order-date').value).toISOString();
+        const dateValue = document.getElementById('order-date').value;
+        const date = new Date(`${dateValue}T00:00:00`).toISOString();
 
         const data = {
             customerId: document.getElementById('order-customer-id').value,
@@ -262,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
             orderId: orderId_payment,
             amount,
             reference: document.getElementById('payment-reference').value,
-            date: new Date(document.getElementById('payment-date').value).toISOString(),
+            date: new Date(`${document.getElementById('payment-date').value}T00:00:00`).toISOString(),
         };
 
         if (id) { // Existing payment
