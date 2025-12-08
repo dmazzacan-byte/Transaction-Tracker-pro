@@ -37,26 +37,33 @@ export function renderProducts(searchTerm = '') {
 export function renderCustomers(searchTerm = '') {
     const { customers, orders } = getState();
     const tableBody = document.getElementById('customers-table-body');
-    if (!tableBody || !customers) return;
+    if (!tableBody) return; // Always check for the element first
 
-    const filtered = customers.filter(c => c && c.name && c.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    // Ensure customers and orders are arrays before proceeding
+    const safeCustomers = Array.isArray(customers) ? customers : [];
+    const safeOrders = Array.isArray(orders) ? orders : [];
+
+    const filtered = safeCustomers.filter(c => c && c.name && c.name.toLowerCase().includes(searchTerm.toLowerCase()));
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
 
     filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     const rowsHtml = filtered.map(c => {
-        const customerOrders = orders ? orders.filter(o => o && o.customerId === c.id) : [];
+        // Defensive check for customer object
+        if (!c) return '';
+
+        const customerOrders = safeOrders.filter(o => o && o.customerId === c.id);
         const historicalVolume = customerOrders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
         const monthlyVolume = customerOrders
             .filter(o => {
-                if (!o.date) return false;
+                if (!o || !o.date) return false;
                 const orderDate = new Date(o.date);
                 return !isNaN(orderDate.getTime()) && orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
             })
             .reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
         const pendingAmount = customerOrders
-            .filter(o => o.status !== 'Paid')
+            .filter(o => o && o.status !== 'Paid')
             .reduce((sum, o) => sum + ((parseFloat(o.total) || 0) - (parseFloat(o.amountPaid) || 0)), 0);
 
         return `
@@ -179,8 +186,14 @@ export function renderPayments(customerId, month, year) {
 export function renderUsers() {
     const { users } = getState();
     const tableBody = document.getElementById('users-table-body');
+    if (!tableBody) return;
+
+    const safeUsers = Array.isArray(users) ? users : [];
     tableBody.innerHTML = '';
-    users.forEach(u => {
+
+    safeUsers.forEach(u => {
+        if (!u || !u.email) return; // Skip if user or email is not defined
+
         const row = `
             <tr>
                 <td>${u.name || u.email.split('@')[0]}</td>
