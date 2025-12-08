@@ -1,10 +1,17 @@
-import { getState } from '../state.js';
+import { getState, setState } from '../state.js';
+import { setupProfitabilityTable, renderProfitabilityTable } from './profitability.js';
+import { getProfitabilityForMonth } from '../services/profitability.js';
 
 let salesChart, productSalesChart, customerRankingChart;
 
 export function setupDashboard() {
     populateDateFilters();
     updateDashboard();
+
+    const month = parseInt(document.getElementById('dashboard-month').value);
+    const year = parseInt(document.getElementById('dashboard-year').value);
+    setupProfitabilityTable(year, month);
+
 
     document.getElementById('dashboard-month').addEventListener('change', updateDashboard);
     document.getElementById('dashboard-year').addEventListener('change', updateDashboard);
@@ -25,10 +32,15 @@ function populateDateFilters() {
     yearSelect.innerHTML = yearOptions;
 }
 
-export function updateDashboard() {
-    const { orders } = getState();
+export async function updateDashboard() {
     const month = parseInt(document.getElementById('dashboard-month').value);
     const year = parseInt(document.getElementById('dashboard-year').value);
+
+    const profitability = await getProfitabilityForMonth(year, month);
+    setState({ profitability });
+    setupProfitabilityTable(year, month);
+
+    const { orders } = getState();
 
     const filteredOrders = orders.filter(o => {
         const orderDate = new Date(o.date);
@@ -39,6 +51,7 @@ export function updateDashboard() {
     renderProductSalesChart(filteredOrders);
     renderPendingOrders(orders);
     renderCustomerRankingChart(filteredOrders);
+    renderProfitabilityTable();
 }
 
 function renderSalesChart(filteredOrders, month, year) {
@@ -80,6 +93,11 @@ function renderSalesChart(filteredOrders, month, year) {
             scales: {
                 y: { position: 'left', title: { display: true, text: 'Ventas Diarias' }},
                 y1: { position: 'right', title: { display: true, text: 'Ventas Acumuladas' }, grid: { drawOnChartArea: false } },
+            },
+            plugins: {
+                datalabels: {
+                    display: false // Ocultar etiquetas en este gráfico
+                }
             }
         }
     });
@@ -99,6 +117,10 @@ function renderProductSalesChart(filteredOrders) {
         }
     });
 
+    const chartData = Object.values(productSales);
+    const totalSales = chartData.reduce((a, b) => a + b, 0);
+    const SMALL_SLICE_PERCENTAGE = 7; // Threshold to move labels outside
+
     const ctx = document.getElementById('product-sales-chart').getContext('2d');
     if (productSalesChart) productSalesChart.destroy();
     productSalesChart = new Chart(ctx, {
@@ -106,7 +128,7 @@ function renderProductSalesChart(filteredOrders) {
         data: {
             labels: Object.keys(productSales),
             datasets: [{
-                data: Object.values(productSales),
+                data: chartData,
                 backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6c757d'],
             }]
         },
@@ -114,16 +136,37 @@ function renderProductSalesChart(filteredOrders) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'left' },
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                },
+                tooltip: {
+                    enabled: true // Re-enabling tooltips is generally better UX
+                },
                 datalabels: {
                     formatter: (value, ctx) => {
-                        const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                        if (total === 0) {
-                            return '0%';
-                        }
-                        return (value / total * 100).toFixed(2) + "%";
+                        if (totalSales === 0) return null;
+                        const percentage = (value / totalSales) * 100;
+                        return `$${value.toFixed(2)}\n(${percentage.toFixed(1)}%)`;
                     },
-                    color: '#fff',
+                    color: (ctx) => {
+                        const percentage = (ctx.dataset.data[ctx.dataIndex] / totalSales) * 100;
+                        return percentage < SMALL_SLICE_PERCENTAGE ? '#000' : '#fff';
+                    },
+                    textAlign: 'center',
+                    font: {
+                        weight: 'bold'
+                    },
+                    // Conditional positioning for small slices
+                    anchor: (ctx) => {
+                        const percentage = (ctx.dataset.data[ctx.dataIndex] / totalSales) * 100;
+                        return percentage < SMALL_SLICE_PERCENTAGE ? 'end' : 'center';
+                    },
+                    align: (ctx) => {
+                        const percentage = (ctx.dataset.data[ctx.dataIndex] / totalSales) * 100;
+                        return percentage < SMALL_SLICE_PERCENTAGE ? 'end' : 'center';
+                    },
+                    offset: 4
                 }
             }
         }
@@ -152,7 +195,21 @@ function renderCustomerRankingChart(filteredOrders) {
                 backgroundColor: '#28a745',
             }]
         },
-        options: { responsive: true, indexAxis: 'y' }
+        options: {
+            responsive: true,
+            indexAxis: 'y',
+            plugins: {
+                datalabels: {
+                    anchor: 'end',
+                    align: 'end',
+                    formatter: (value) => `$${value.toFixed(2)}`,
+                    color: 'black',
+                    font: {
+                        weight: 'bold'
+                    }
+                }
+            }
+        }
     });
 }
 

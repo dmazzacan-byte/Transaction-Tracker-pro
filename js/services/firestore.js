@@ -12,6 +12,7 @@ import {
     limit
 } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 import { getCurrentUser } from '../auth.js';
+import { getProfitabilityForMonth } from './profitability.js';
 
 // ... (keep existing functions: getCollection, fetchData, saveOrUpdate, deleteItem) ...
 async function getCollection(collectionName) {
@@ -44,7 +45,11 @@ export async function fetchData() {
         return order;
     });
 
-    return { products, customers, orders: normalizedOrders, payments, users };
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const profitability = await getProfitabilityForMonth(currentYear, currentMonth);
+
+    return { products, customers, orders: normalizedOrders, payments, users, profitability };
 }
 
 export async function saveOrUpdate(collectionName, id, data) {

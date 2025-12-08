@@ -297,19 +297,22 @@ th {
 .dashboard-grid {
     display: grid;
     grid-template-areas:
-        "daily-sales"
-        "customer-ranking"
-        "product-sales"
-        "pending-debts";
-    grid-template-columns: 1fr;
+        "daily-sales daily-sales"
+        "customer-ranking customer-ranking"
+        "product-sales product-sales"
+        "profitability profitability"
+        "pending-debts pending-debts";
+    grid-template-columns: 1fr 1fr;
     grid-auto-rows: auto;
     gap: 2rem;
+    align-items: start;
 }
 
 #daily-sales-card { grid-area: daily-sales; }
 #product-sales-card { grid-area: product-sales; }
 #customer-ranking-card { grid-area: customer-ranking; }
 #pending-debts-card { grid-area: pending-debts; }
+#profitability-card { grid-area: profitability; }
 
 .aspect-ratio-2-1 {
     position: relative;
@@ -359,6 +362,18 @@ th {
 
 .card h3 {
     margin-bottom: 1rem;
+}
+
+#profitability-table-body input {
+    width: 60px;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    text-align: right;
+}
+
+#profitability-table-footer td {
+    font-weight: bold;
 }
 
 #pending-orders-list {

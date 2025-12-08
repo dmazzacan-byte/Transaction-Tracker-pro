@@ -4,6 +4,7 @@ let state = {
     orders: [],
     payments: [],
     users: [],
+    profitability: {},
 };
 
 export function setState(newState) {
