@@ -117,6 +117,10 @@ function renderProductSalesChart(filteredOrders) {
         }
     });
 
+    const chartData = Object.values(productSales);
+    const totalSales = chartData.reduce((a, b) => a + b, 0);
+    const SMALL_SLICE_PERCENTAGE = 7; // Threshold to move labels outside
+
     const ctx = document.getElementById('product-sales-chart').getContext('2d');
     if (productSalesChart) productSalesChart.destroy();
     productSalesChart = new Chart(ctx, {
@@ -124,7 +128,7 @@ function renderProductSalesChart(filteredOrders) {
         data: {
             labels: Object.keys(productSales),
             datasets: [{
-                data: Object.values(productSales),
+                data: chartData,
                 backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6c757d'],
             }]
         },
@@ -133,26 +137,36 @@ function renderProductSalesChart(filteredOrders) {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    display: false
+                    display: true,
+                    position: 'bottom',
                 },
                 tooltip: {
-                    enabled: false
+                    enabled: true // Re-enabling tooltips is generally better UX
                 },
                 datalabels: {
                     formatter: (value, ctx) => {
-                        const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                        if (total === 0) {
-                            return null;
-                        }
-                        const percentage = ((value / total) * 100).toFixed(2) + "%";
-                        const label = ctx.chart.data.labels[ctx.dataIndex];
-                        return `${label}\n$${value.toFixed(2)}\n(${percentage})`;
+                        if (totalSales === 0) return null;
+                        const percentage = (value / totalSales) * 100;
+                        return `$${value.toFixed(2)}\n(${percentage.toFixed(1)}%)`;
                     },
-                    color: '#fff',
+                    color: (ctx) => {
+                        const percentage = (ctx.dataset.data[ctx.dataIndex] / totalSales) * 100;
+                        return percentage < SMALL_SLICE_PERCENTAGE ? '#000' : '#fff';
+                    },
                     textAlign: 'center',
                     font: {
                         weight: 'bold'
-                    }
+                    },
+                    // Conditional positioning for small slices
+                    anchor: (ctx) => {
+                        const percentage = (ctx.dataset.data[ctx.dataIndex] / totalSales) * 100;
+                        return percentage < SMALL_SLICE_PERCENTAGE ? 'end' : 'center';
+                    },
+                    align: (ctx) => {
+                        const percentage = (ctx.dataset.data[ctx.dataIndex] / totalSales) * 100;
+                        return percentage < SMALL_SLICE_PERCENTAGE ? 'end' : 'center';
+                    },
+                    offset: 4
                 }
             }
         }
@@ -189,9 +203,7 @@ function renderCustomerRankingChart(filteredOrders) {
                     anchor: 'end',
                     align: 'end',
                     formatter: (value) => `$${value.toFixed(2)}`,
-                    color: 'white',
-                    textShadowColor: 'black',
-                    textShadowBlur: 4,
+                    color: 'black',
                     font: {
                         weight: 'bold'
                     }
