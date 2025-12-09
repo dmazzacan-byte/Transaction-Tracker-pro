@@ -420,6 +420,19 @@ th {
 .standard-toolbar > .autocomplete-container {
     flex-grow: 1;
     max-width: 400px;
+    padding: 0; /* Remove padding from the container */
+}
+
+/* Ensure the input inside the autocomplete container matches the other filter elements */
+.standard-toolbar .autocomplete-container input {
+    height: 100%; /* Fill the container's height (40px) */
+    width: 100%;
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--surface-color);
+    box-sizing: border-box;
 }
 
 .standard-toolbar label {
