@@ -522,6 +522,13 @@ function handleWhatsApp(id, type, dataset) {
         return;
     }
 
+    const cleanedPhone = String(customer.phone).replace(/\D/g, '');
+
+    if (!cleanedPhone) {
+        alert('El número de teléfono registrado no es válido.');
+        return;
+    }
+
     switch (type) {
         case 'pending-payment':
             const firstName = customer.name.split(' ')[0];
@@ -542,7 +549,7 @@ function handleWhatsApp(id, type, dataset) {
     }
 
     if (message) {
-        const whatsappUrl = `https://wa.me/${customer.phone}?text=${encodeURIComponent(message)}`;
+        const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, '_blank');
     }
 }
