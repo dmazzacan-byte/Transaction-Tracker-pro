@@ -522,6 +522,13 @@ function handleWhatsApp(id, type, dataset) {
         return;
     }
 
+    const cleanedPhone = String(customer.phone).replace(/\D/g, '');
+
+    if (!cleanedPhone) {
+        alert('El número de teléfono registrado no es válido.');
+        return;
+    }
+
     switch (type) {
         case 'pending-payment':
             const firstName = customer.name.split(' ')[0];
@@ -534,14 +541,15 @@ function handleWhatsApp(id, type, dataset) {
              if (!order) return;
              const itemsSummary = (order.items || []).map(item => {
                 const product = products.find(p => p.id === item.productId);
-                return `• ${item.quantity} x ${product.description}`;
+                const itemTotal = item.quantity * item.price;
+                return `- ${item.quantity} x ${product.description} x ${item.price.toFixed(2)} = ${itemTotal.toFixed(2)}`;
              }).join('\n');
-             message = `Pedido del ${new Date(order.date).toLocaleDateString('es-ES')}:\n\n${itemsSummary}\n--------------------\nTotal: $${order.total.toFixed(2)}`;
+             message = `Pedido entregado el ${new Date(order.date).toLocaleDateString('es-ES')}\n\n${itemsSummary}\n_____________________________\nTotal: $${order.total.toFixed(2)}`;
              break;
     }
 
     if (message) {
-        const whatsappUrl = `https://wa.me/${customer.phone}?text=${encodeURIComponent(message)}`;
+        const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, '_blank');
     }
 }

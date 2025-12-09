@@ -1,0 +1,107 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - text: 
+  - navigation [ref=e3]:
+    - heading "TransactionTracker" [level=3] [ref=e5]
+    - list [ref=e6]:
+      - listitem [ref=e7]:
+        - link " Dashboard" [ref=e8] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e9]: 
+          - generic [ref=e10]: Dashboard
+      - listitem [ref=e11]:
+        - link " Pedidos" [ref=e12] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e13]: 
+          - generic [ref=e14]: Pedidos
+      - listitem [ref=e15]:
+        - link " Pagos" [ref=e16] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e17]: 
+          - generic [ref=e18]: Pagos
+      - listitem [ref=e19]:
+        - link " Clientes" [ref=e20] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e21]: 
+          - generic [ref=e22]: Clientes
+      - listitem [ref=e23]:
+        - link " Productos" [ref=e24] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e25]: 
+          - generic [ref=e26]: Productos
+      - listitem [ref=e27]:
+        - link " Configuración" [ref=e28] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e29]: 
+          - generic [ref=e30]: Configuración
+    - button " Cerrar Sesión" [ref=e32] [cursor=pointer]:
+      - generic [ref=e33]: 
+      - generic [ref=e34]: Cerrar Sesión
+  - main [ref=e35]:
+    - generic [ref=e36]:
+      - generic [ref=e37]:
+        - heading "Dashboard" [level=1] [ref=e38]
+        - generic [ref=e39]:
+          - combobox [ref=e40]:
+            - option "Enero"
+            - option "Febrero"
+            - option "Marzo"
+            - option "Abril"
+            - option "Mayo"
+            - option "Junio"
+            - option "Julio"
+            - option "Agosto"
+            - option "Septiembre"
+            - option "Octubre"
+            - option "Noviembre"
+            - option "Diciembre" [selected]
+          - combobox [ref=e41]:
+            - option "2025" [selected]
+            - option "2024"
+            - option "2023"
+            - option "2022"
+            - option "2021"
+            - option "2020"
+      - generic [ref=e42]:
+        - heading "Ventas Diarias" [level=3] [ref=e44]
+        - heading "Ventas por Producto" [level=3] [ref=e48]
+        - heading "Ranking de Clientes" [level=3] [ref=e52]
+        - generic [ref=e55]:
+          - heading "Pagos Pendientes ($0.00)" [level=3] [ref=e56]
+          - table [ref=e58]:
+            - rowgroup [ref=e59]:
+              - row "Cliente Monto Antigüedad Acciones" [ref=e60]:
+                - columnheader "Cliente" [ref=e61]
+                - columnheader "Monto" [ref=e62]
+                - columnheader "Antigüedad" [ref=e63]
+                - columnheader "Acciones" [ref=e64]
+            - rowgroup [ref=e65]:
+              - row "No hay pagos pendientes" [ref=e66]:
+                - cell "No hay pagos pendientes" [ref=e67]
+        - generic [ref=e68]:
+          - heading "Rentabilidad por Producto" [level=3] [ref=e69]
+          - table [ref=e71]:
+            - rowgroup [ref=e72]:
+              - row "Producto % Ganancia Ventas Ganancia" [ref=e73]:
+                - columnheader "Producto" [ref=e74]
+                - columnheader "% Ganancia" [ref=e75]
+                - columnheader "Ventas" [ref=e76]
+                - columnheader "Ganancia" [ref=e77]
+            - rowgroup
+            - rowgroup [ref=e78]:
+              - row "Totales $0.00 $0.00" [ref=e79]:
+                - cell "Totales" [ref=e80]:
+                  - strong [ref=e81]: Totales
+                - cell "$0.00" [ref=e82]:
+                  - strong [ref=e83]: $0.00
+                - cell "$0.00" [ref=e84]:
+                  - strong [ref=e85]: $0.00
+              - row "% Ganancia Ponderado 0.00%" [ref=e86]:
+                - cell "% Ganancia Ponderado" [ref=e87]:
+                  - strong [ref=e88]: "% Ganancia Ponderado"
+                - cell "0.00%" [ref=e89]:
+                  - strong [ref=e90]: 0.00%
+    - text: + + + +   
+```
