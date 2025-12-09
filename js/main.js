@@ -544,7 +544,7 @@ function handleWhatsApp(id, type, dataset) {
                 const itemTotal = item.quantity * item.price;
                 return `- ${item.quantity} x ${product.description} x ${item.price.toFixed(2)} = ${itemTotal.toFixed(2)}`;
              }).join('\n');
-             message = `Pedido entregado el ${new Date(order.date).toLocaleDateString('es-ES')}\n\n${itemsSummary}\n_____________________________\nTotal: $${order.total.toFixed(2)}`;
+             message = `Pedido entregado el ${new Date(order.date).toLocaleDateString('es-ES')}\n\n${itemsSummary}\n__________________________\nTotal: $${order.total.toFixed(2)}`;
              break;
     }
 
