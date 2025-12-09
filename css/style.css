@@ -685,3 +685,12 @@ th {
         padding: 1.5rem;
     }
 }
+
+/* --- Content Footer --- */
+.content-footer {
+    text-align: center;
+    padding: 1rem;
+    margin-top: 2rem;
+    color: var(--text-color-muted);
+    font-size: 0.9rem;
+}
