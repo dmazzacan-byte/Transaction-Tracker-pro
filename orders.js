@@ -79,7 +79,7 @@ const handleFormSubmit = async (e) => {
         date: orderForm['order-date'].value,
         customerId: orderForm['order-customer'].value,
         productId: orderForm['order-product'].value,
-        quantity: parseInt(orderForm['order-quantity'].value),
+        quantity: parseFloat(orderForm['order-quantity'].value),
         total: parseFloat(orderForm['order-total'].value),
         paid: parseFloat(orderForm['order-paid'].value),
         status: orderForm['order-status'].value,
