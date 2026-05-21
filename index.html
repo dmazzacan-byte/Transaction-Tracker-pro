@@ -1,8 +1,52 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TransactionTracker Pro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css?v=1.2">
+</head>
+<body>
+    <div id="auth-container">
+        <div id="login-view">
+            <h2>Iniciar Sesión</h2>
+            <form id="login-form">
+                <input type="email" id="login-email" placeholder="Correo Electrónico" required>
+                <input type="password" id="login-password" placeholder="Contraseña" required>
+                <button type="submit">Iniciar Sesión</button>
+            </form>
+            <p>¿No tienes una cuenta? <a href="#" id="show-register">Regístrate aquí</a></p>
+        </div>
+        <div id="register-view" class="hidden">
+            <h2>Registrarse</h2>
+            <form id="register-form">
+                <input type="email" id="register-email" placeholder="Correo Electrónico" required>
+                <input type="password" id="register-password" placeholder="Contraseña" required>
+                <button type="submit">Registrarse</button>
+            </form>
+            <p>¿Ya tienes una cuenta? <a href="#" id="show-login">Inicia sesión aquí</a></p>
+        </div>
+    </div>
+
+    <div id="app-container" class="hidden">
+        <button id="menu-toggle"><i class="fas fa-bars"></i></button>
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h3>TransactionTracker</h3>
+            </div>
+            <ul>
+                <li><a href="#" class="nav-link active" data-tab="dashboard"><i class="fas fa-chart-line"></i><span>Dashboard</span></a></li>
+                <li><a href="#" class="nav-link" data-tab="orders"><i class="fas fa-box"></i><span>Pedidos</span></a></li>
+                <li><a href="#" class="nav-link" data-tab="payments"><i class="fas fa-credit-card"></i><span>Pagos</span></a></li>
+                <li><a href="#" class="nav-link" data-tab="customers"><i class="fas fa-users"></i><span>Clientes</span></a></li>
+                <li><a href="#" class="nav-link" data-tab="products"><i class="fas fa-tag"></i><span>Productos</span></a></li>
+                <li><a href="#" class="nav-link" data-tab="settings"><i class="fas fa-cog"></i><span>Configuración</span></a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <button id="logout-btn"><i class="fas fa-sign-out-alt"></i><span>Cerrar Sesión</span></button>
+            </div>
     <title>Transaction Tracker Pro</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -41,6 +85,86 @@
             <button id="logout-button">Logout</button>
         </nav>
         <main class="main-content">
+            <div id="dashboard" class="tab-content active">
+                <div class="header">
+                    <h1>Dashboard</h1>
+                    <div class="standard-toolbar">
+                        <select id="dashboard-month"></select>
+                        <select id="dashboard-year"></select>
+                    </div>
+                </div>
+                <div class="dashboard-grid">
+                    <div id="daily-sales-card" class="card">
+                        <h3>Ventas Diarias</h3>
+                        <div class="chart-container aspect-ratio-2-1">
+                            <canvas id="sales-chart"></canvas>
+                        </div>
+                    </div>
+                    <div id="product-sales-card" class="card">
+                        <h3>Ventas por Producto</h3>
+                        <div class="chart-container aspect-ratio-4-3 pie-chart-container">
+                            <canvas id="product-sales-chart"></canvas>
+                        </div>
+                    </div>
+                    <div id="customer-ranking-card" class="card">
+                        <h3>Ranking de Clientes</h3>
+                        <div class="chart-container aspect-ratio-2-1">
+                            <canvas id="customer-ranking-chart"></canvas>
+                        </div>
+                    </div>
+                    <div id="pending-debts-card" class="card">
+                        <h3>Pagos Pendientes</h3>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Cliente</th>
+                                        <th>Monto</th>
+                                        <th>Antigüedad</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pending-payments-table-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="profitability-card" class="card">
+                        <h3>Rentabilidad por Producto</h3>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th>% Ganancia</th>
+                                        <th>Ventas</th>
+                                        <th>Ganancia</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="profitability-table-body">
+                                </tbody>
+                                <tfoot id="profitability-table-footer">
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <footer class="content-footer">© 2025 Carlino Chocolate, C.A.</footer>
+            </div>
+
+            <div id="orders" class="tab-content">
+                <div class="header">
+                    <h1>Pedidos</h1>
+                    <div class="standard-toolbar">
+                        <div class="autocomplete-container">
+                            <input type="text" id="orders-customer-filter" placeholder="Buscar por cliente..." autocomplete="off">
+                            <div id="orders-customer-filter-results" class="autocomplete-results"></div>
+                        </div>
+                        <input type="hidden" id="orders-customer-filter-id">
+                        <select id="orders-month-filter"></select>
+                        <select id="orders-year-filter"></select>
+                        <button id="add-order-btn" class="btn-primary"><i class="fas fa-plus"></i> Nuevo Pedido</button>
+                    </div>
             <section id="dashboard" class="content-section">
                 <div class="section-header">
                     <h2>Dashboard</h2>
@@ -104,6 +228,27 @@
                                 <th>Fecha</th>
                                 <th>Cliente</th>
                                 <th>Producto</th>
+                                <th>Total</th>
+                                <th>Monto Pagado</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orders-table-body"></tbody>
+                        <tfoot id="orders-table-footer">
+                        </tfoot>
+                    </table>
+                </div>
+                <footer class="content-footer">© 2025 Carlino Chocolate, C.A.</footer>
+            </div>
+
+            <div id="customers" class="tab-content">
+                <div class="header">
+                    <h1>Clientes</h1>
+                    <div class="standard-toolbar">
+                        <input type="text" id="customers-search" placeholder="Buscar por cliente...">
+                        <button id="add-customer-btn" class="btn-primary"><i class="fas fa-plus"></i> Nuevo Cliente</button>
+                    </div>
                                 <th>Cantidad</th>
                                 <th>Valor Total</th>
                                 <th>Monto Abonado</th>
@@ -176,6 +321,8 @@
                             <tr>
                                 <th>Nombre</th>
                                 <th>Teléfono</th>
+                                <th>Volumen Mensual</th>
+                                <th>Volumen Histórico</th>
                                 <th>Volumen de Compras (Mes)</th>
                                 <th>Volumen de Compras (Histórico)</th>
                                 <th>Monto Pendiente</th>
@@ -187,6 +334,22 @@
                         </tbody>
                     </table>
                 </div>
+                <footer class="content-footer">© 2025 Carlino Chocolate, C.A.</footer>
+            </div>
+
+            <div id="payments" class="tab-content">
+                <div class="header">
+                    <h1>Pagos</h1>
+                    <div class="standard-toolbar">
+                        <div class="autocomplete-container">
+                             <input type="text" id="payments-customer-filter" placeholder="Buscar por cliente..." autocomplete="off">
+                             <div id="payments-customer-filter-results" class="autocomplete-results"></div>
+                        </div>
+                        <input type="hidden" id="payments-customer-filter-id">
+                        <select id="payments-month-filter"></select>
+                        <select id="payments-year-filter"></select>
+                        <button id="add-payment-btn" class="btn-primary"><i class="fas fa-plus"></i> Nuevo Pago</button>
+                    </div>
             </section>
 
             <!-- Customer Modal -->
@@ -221,6 +384,7 @@
                                 <th>Cliente</th>
                                 <th>Pedido</th>
                                 <th>Monto</th>
+                                <th>Referencia</th>
                                 <th>Nro de Referencia</th>
                                 <th>Acciones</th>
                             </tr>
@@ -230,6 +394,16 @@
                         </tbody>
                     </table>
                 </div>
+                <footer class="content-footer">© 2025 Carlino Chocolate, C.A.</footer>
+            </div>
+
+            <div id="products" class="tab-content">
+                <div class="header">
+                    <h1>Productos</h1>
+                    <div class="standard-toolbar">
+                        <input type="text" id="products-search" placeholder="Buscar por producto...">
+                        <button id="add-product-btn" class="btn-primary"><i class="fas fa-plus"></i> Nuevo Producto</button>
+                    </div>
             </section>
 
             <!-- Payment Modal -->
@@ -277,6 +451,8 @@
                         <thead>
                             <tr>
                                 <th>Descripción</th>
+                                <th>P. Detal</th>
+                                <th>P. Mayor</th>
                                 <th>Precio Detal</th>
                                 <th>Precio Mayor</th>
                                 <th>Acciones</th>
@@ -287,6 +463,32 @@
                         </tbody>
                     </table>
                 </div>
+                <footer class="content-footer">© 2025 Carlino Chocolate, C.A.</footer>
+            </div>
+
+            <div id="settings" class="tab-content">
+                <div class="header">
+                    <h1>Configuración</h1>
+                    <div class="standard-toolbar">
+                        <button id="backup-data-btn" class="btn-secondary"><i class="fas fa-download"></i> Respaldar Datos (Excel)</button>
+                        <input type="file" id="restore-data-input" accept=".xlsx" style="display: none;">
+                        <button id="restore-data-btn" class="btn-secondary"><i class="fas fa-upload"></i> Restaurar Datos</button>
+                    </div>
+                </div>
+                <div class="settings-grid">
+                    <div class="card">
+                        <h3>Gestión de Usuarios</h3>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>Correo Electrónico</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-table-body"></tbody>
+                            </table>
             </section>
 
             <!-- Product Modal -->
@@ -320,6 +522,128 @@
                         <p>Download all your data as an Excel file.</p>
                         <button id="backup-btn" class="btn">Backup Data</button>
                     </div>
+                </div>
+                <footer class="content-footer">© 2025 Carlino Chocolate, C.A.</footer>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-backdrop" class="hidden"></div>
+
+    <div id="order-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="order-modal-title">Nuevo Pedido</h2>
+            <form id="order-form">
+                <input type="hidden" id="order-id">
+                <label for="order-date">Fecha:</label>
+                <input type="date" id="order-date" required>
+                <div class="form-row-space-between">
+                    <label for="order-customer-search">Cliente:</label>
+                    <button type="button" id="add-customer-from-order-btn" class="btn-link">+ Nuevo</button>
+                </div>
+                <div class="autocomplete-container">
+                    <input type="text" id="order-customer-search" required autocomplete="off">
+                    <div id="customer-autocomplete-results" class="autocomplete-results"></div>
+                </div>
+                <input type="hidden" id="order-customer-id">
+
+                <hr>
+                <h4>Ítems del Pedido</h4>
+                <div id="order-items-container">
+                </div>
+                <button type="button" id="add-item-btn" class="btn-secondary">+ Agregar Producto</button>
+                <hr>
+
+                <div class="form-row-space-between">
+                    <strong>Total:</strong>
+                    <strong id="order-total-display">$0.00</strong>
+                </div>
+
+                <label for="order-status">Estado del Pago:</label>
+                <select id="order-status">
+                    <option value="Pending">Pendiente</option>
+                    <option value="Partial">Parcial</option>
+                    <option value="Paid">Pagado</option>
+                </select>
+
+                <div id="order-payment-details" class="hidden">
+                    <label for="order-amount-paid">Monto Pagado:</label>
+                    <input type="number" id="order-amount-paid" step="0.01">
+                    <label for="order-bank-reference">Referencia Bancaria:</label>
+                    <input type="text" id="order-bank-reference">
+                </div>
+
+                <button type="submit" class="btn-primary">Guardar Pedido</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="customer-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="customer-modal-title">Nuevo Cliente</h2>
+            <form id="customer-form">
+                <input type="hidden" id="customer-id">
+                <label for="customer-name">Nombre:</label>
+                <input type="text" id="customer-name" required>
+                <label for="customer-phone">Teléfono:</label>
+                <input type="tel" id="customer-phone">
+                <button type="submit" class="btn-primary">Guardar Cliente</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="payment-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="payment-modal-title">Nuevo Pago</h2>
+            <form id="payment-form">
+                <input type="hidden" id="payment-id">
+                <input type="hidden" id="payment-order-id">
+                <input type="hidden" id="payment-customer-id">
+                <label for="payment-date">Fecha:</label>
+                <input type="date" id="payment-date" required>
+                <label for="payment-customer-search">Cliente:</label>
+                <div class="autocomplete-container">
+                    <input type="text" id="payment-customer-search" required autocomplete="off">
+                    <div id="payment-customer-autocomplete-results" class="autocomplete-results"></div>
+                </div>
+                <label for="payment-order">Pedido:</label>
+                <select id="payment-order" required disabled></select>
+                <label for="payment-amount">Monto:</label>
+                <input type="number" id="payment-amount" step="0.01" required>
+                 <label for="payment-reference">Referencia Bancaria:</label>
+                <input type="text" id="payment-reference">
+                <button type="submit" class="btn-primary">Guardar Pago</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="product-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="product-modal-title">Nuevo Producto</h2>
+            <form id="product-form">
+                <input type="hidden" id="product-id">
+                <label for="product-description">Descripción:</label>
+                <input type="text" id="product-description" required>
+                <label for="product-retail-price">P. Detal:</label>
+                <input type="number" id="product-retail-price" step="0.01" required>
+                <label for="product-wholesale-price">P. Mayor:</label>
+                <input type="number" id="product-wholesale-price" step="0.01" required>
+                <button type="submit" class="btn-primary">Guardar Producto</button>
+            </form>
+        </div>
+    </div>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script type="module" src="js/main.js?v=1.1"></script>
                     <div class="action-card">
                         <h3>Restore</h3>
                         <p>Restore your data from an Excel file.</p>
