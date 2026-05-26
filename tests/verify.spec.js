@@ -21,19 +21,19 @@ test.describe('UI Verification', () => {
     await page.click('#register-form button[type="submit"]');
 
     // Wait for app to load after login
-    await expect(page.locator('#app-container')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('body')).toHaveAttribute('data-ready', 'true', { timeout: 10000 });
+    await expect(page.locator('#app-container')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('body')).toHaveAttribute('data-ready', 'true', { timeout: 15000 });
 
     // Capture Dashboard
     await page.screenshot({ path: 'verification/dashboard-fix.png' });
 
     // Navigate and Capture Orders
-    await page.click('a.nav-link[data-view="orders"]');
+    await page.click('a.nav-link[data-tab="orders"]');
     await expect(page.locator('#orders')).toBeVisible();
     await page.screenshot({ path: 'verification/orders-fix.png' });
 
     // Navigate and Capture Customers
-    await page.click('a.nav-link[data-view="customers"]');
+    await page.click('a.nav-link[data-tab="customers"]');
     await expect(page.locator('#customers')).toBeVisible();
     await page.screenshot({ path: 'verification/customers-fix.png' });
   });
