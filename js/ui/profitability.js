@@ -43,11 +43,13 @@ export function renderProfitabilityTable() {
     });
 
     const salesByProduct = {};
+    const unitsByProduct = {};
     filteredOrders.forEach(order => {
         if (Array.isArray(order.items)) {
             order.items.forEach(item => {
                 const itemTotal = item.price * item.quantity;
                 salesByProduct[item.productId] = (salesByProduct[item.productId] || 0) + itemTotal;
+                unitsByProduct[item.productId] = (unitsByProduct[item.productId] || 0) + item.quantity;
             });
         }
     });
@@ -59,6 +61,7 @@ export function renderProfitabilityTable() {
     tableBody.innerHTML = '';
     let totalSales = 0;
     let totalProfit = 0;
+    let totalUnits = 0;
 
     const sortedProducts = [...products].sort((a, b) => {
         const salesA = salesByProduct[a.id] || 0;
@@ -69,17 +72,20 @@ export function renderProfitabilityTable() {
 
     sortedProducts.forEach(product => {
         const sales = salesByProduct[product.id] || 0;
-        if (sales === 0) return; // Don't show products with no sales in the selected month
+        const units = unitsByProduct[product.id] || 0;
+        if (sales === 0 && units === 0) return; // Don't show products with no sales in the selected month
 
         const percentage = profitability[product.id] || 0;
         const profit = sales * (percentage / 100);
 
         totalSales += sales;
         totalProfit += profit;
+        totalUnits += units;
 
         const row = `
             <tr>
                 <td>${product.description}</td>
+                <td>${units.toFixed(2)}</td>
                 <td><input type="number" class="profit-percentage" data-product-id="${product.id}" value="${percentage}" step="0.01"></td>
                 <td>$${sales.toFixed(2)}</td>
                 <td>$${profit.toFixed(2)}</td>
@@ -92,12 +98,14 @@ export function renderProfitabilityTable() {
 
     tableFooter.innerHTML = `
         <tr>
-            <td colspan="2"><strong>Totales</strong></td>
+            <td><strong>Totales</strong></td>
+            <td><strong>${totalUnits.toFixed(2)}</strong></td>
+            <td></td>
             <td><strong>$${totalSales.toFixed(2)}</strong></td>
             <td><strong>$${totalProfit.toFixed(2)}</strong></td>
         </tr>
         <tr>
-            <td colspan="3"><strong>% Ganancia Ponderado</strong></td>
+            <td colspan="4"><strong>% Ganancia Ponderado</strong></td>
             <td><strong>${weightedProfitPercentage.toFixed(2)}%</strong></td>
         </tr>
     `;
