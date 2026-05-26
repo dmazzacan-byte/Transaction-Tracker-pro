@@ -59,45 +59,16 @@
                     </div>
                 </div>
                 <div class="dashboard-grid">
-                    <div id="daily-sales-card" class="card">
-                        <h3>Ventas Diarias</h3>
-                        <div class="chart-container aspect-ratio-2-1">
-                            <canvas id="sales-chart"></canvas>
-                        </div>
-                    </div>
                     <div id="monthly-sales-card" class="card">
                         <h3>Ventas Mensuales</h3>
                         <div class="chart-container aspect-ratio-2-1">
                             <canvas id="monthly-sales-chart"></canvas>
                         </div>
                     </div>
-                    <div id="product-sales-card" class="card">
-                        <h3>Ventas por Producto</h3>
-                        <div class="chart-container aspect-ratio-4-3 pie-chart-container">
-                            <canvas id="product-sales-chart"></canvas>
-                        </div>
-                    </div>
-                    <div id="customer-ranking-card" class="card">
-                        <h3>Ranking de Clientes</h3>
+                    <div id="daily-sales-card" class="card">
+                        <h3>Ventas Diarias</h3>
                         <div class="chart-container aspect-ratio-2-1">
-                            <canvas id="customer-ranking-chart"></canvas>
-                        </div>
-                    </div>
-                    <div id="pending-debts-card" class="card">
-                        <h3>Pagos Pendientes</h3>
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Cliente</th>
-                                        <th>Monto</th>
-                                        <th>Antigüedad</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="pending-payments-table-body">
-                                </tbody>
-                            </table>
+                            <canvas id="sales-chart"></canvas>
                         </div>
                     </div>
                     <div id="profitability-card" class="card">
@@ -118,6 +89,35 @@
                                 <tfoot id="profitability-table-footer">
                                 </tfoot>
                             </table>
+                        </div>
+                    </div>
+                    <div id="pending-debts-card" class="card">
+                        <h3>Pagos Pendientes</h3>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Cliente</th>
+                                        <th>Monto</th>
+                                        <th>Antigüedad</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pending-payments-table-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="product-sales-card" class="card">
+                        <h3>Ventas por Producto</h3>
+                        <div class="chart-container aspect-ratio-4-3 pie-chart-container">
+                            <canvas id="product-sales-chart"></canvas>
+                        </div>
+                    </div>
+                    <div id="customer-ranking-card" class="card">
+                        <h3>Ranking de Clientes</h3>
+                        <div class="chart-container aspect-ratio-2-1">
+                            <canvas id="customer-ranking-chart"></canvas>
                         </div>
                     </div>
                 </div>
