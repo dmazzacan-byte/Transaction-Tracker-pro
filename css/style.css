@@ -29,6 +29,7 @@ body {
     color: var(--text-color);
     display: flex;
     height: 100vh;
+    height: -webkit-fill-available;
     overflow: hidden;
 }
 
@@ -175,6 +176,7 @@ body {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    height: -webkit-fill-available;
     overflow: hidden;
 }
 
@@ -546,6 +548,30 @@ th {
     .header h1 { font-size: 1.2rem; }
     .card { padding: 1rem; }
     .modal { padding: 1rem; }
+}
+
+/* iOS specific fixes */
+@supports (-webkit-touch-callout: none) {
+    body, .main-content {
+        height: -webkit-fill-available;
+    }
+
+    .sidebar {
+        padding-top: max(1rem, env(safe-area-inset-top));
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
+
+    .tab-content {
+        padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+    }
+
+    #menu-toggle {
+        top: calc(12px + env(safe-area-inset-top));
+    }
+
+    .header {
+        padding-top: calc(1rem + env(safe-area-inset-top));
+    }
 }
 
 .hidden {

@@ -2,7 +2,7 @@ import { getState, setState } from '../state.js';
 import { setupProfitabilityTable, renderProfitabilityTable } from './profitability.js';
 import { getProfitabilityForMonth } from '../services/profitability.js';
 
-let salesChart, productSalesChart, customerRankingChart;
+let salesChart, monthlySalesChart, productSalesChart, customerRankingChart;
 
 export function setupDashboard() {
     populateDateFilters();
@@ -48,6 +48,7 @@ export async function updateDashboard() {
     });
 
     renderSalesChart(filteredOrders, month, year);
+    renderMonthlySalesChart(orders, year);
     renderProductSalesChart(filteredOrders);
     renderPendingOrders(orders);
     renderCustomerRankingChart(filteredOrders);
@@ -97,6 +98,57 @@ function renderSalesChart(filteredOrders, month, year) {
             plugins: {
                 datalabels: {
                     display: false // Ocultar etiquetas en este gráfico
+                }
+            }
+        }
+    });
+}
+
+function renderMonthlySalesChart(allOrders, year) {
+    const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    const salesData = new Array(12).fill(0);
+
+    allOrders.forEach(o => {
+        const orderDate = new Date(o.date);
+        if (orderDate.getFullYear() === year) {
+            const month = orderDate.getMonth();
+            salesData[month] += o.total;
+        }
+    });
+
+    const cumulativeSalesData = salesData.reduce((acc, val, i) => {
+        acc[i] = (acc[i - 1] || 0) + val;
+        return acc;
+    }, []);
+
+    const ctx = document.getElementById('monthly-sales-chart').getContext('2d');
+    if (monthlySalesChart) monthlySalesChart.destroy();
+    monthlySalesChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: months,
+            datasets: [{
+                label: 'Ventas Mensuales',
+                data: salesData,
+                backgroundColor: 'rgba(0, 123, 255, 0.6)',
+                yAxisID: 'y',
+            }, {
+                label: 'Ventas Acumuladas',
+                data: cumulativeSalesData,
+                type: 'line',
+                borderColor: 'rgba(40, 167, 69, 1)',
+                yAxisID: 'y1',
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { position: 'left', title: { display: true, text: 'Ventas Mensuales' } },
+                y1: { position: 'right', title: { display: true, text: 'Ventas Acumuladas' }, grid: { drawOnChartArea: false } },
+            },
+            plugins: {
+                datalabels: {
+                    display: false
                 }
             }
         }
