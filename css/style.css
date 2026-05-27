@@ -30,7 +30,6 @@ body {
     display: flex;
     height: 100vh;
     height: -webkit-fill-available;
-    overflow: hidden;
 }
 
 /* --- Auth Container --- */
@@ -175,9 +174,7 @@ body {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    height: -webkit-fill-available;
-    overflow: hidden;
+    min-height: 0; /* Important for scrollable children in flexbox */
 }
 
 .header {
@@ -203,10 +200,12 @@ body {
     overflow-y: auto;
     padding: 1.5rem;
     -webkit-overflow-scrolling: touch; /* Smooth scrolling for iOS */
+    min-height: 0;
 }
 
 .tab-content.active {
-    display: block;
+    display: flex;
+    flex-direction: column;
 }
 
 /* --- General Components --- */
@@ -357,24 +356,28 @@ th {
 
 #profitability-card th:nth-child(1),
 #profitability-card td:nth-child(1) {
-    width: 36%;
+    width: 44%; /* Give product more space */
+}
+
+#profitability-card th:nth-child(3),
+#profitability-card td:nth-child(3) {
+    width: 12%; /* % Ganancia column is now more narrow */
+    text-align: center;
 }
 
 #profitability-card th:nth-child(2),
 #profitability-card td:nth-child(2),
-#profitability-card th:nth-child(3),
-#profitability-card td:nth-child(3),
 #profitability-card th:nth-child(4),
 #profitability-card td:nth-child(4),
 #profitability-card th:nth-child(5),
 #profitability-card td:nth-child(5) {
-    width: 16%;
+    width: 11%;
     text-align: right;
 }
 
 #profitability-card input.profit-percentage {
     width: 100%;
-    max-width: 60px;
+    max-width: 50px; /* Reduced to fit better in the column */
     padding: 0.2rem;
     margin: 0;
     text-align: right;
@@ -541,6 +544,7 @@ th {
         padding-top: 4rem; /* Space for menu-toggle */
         flex-direction: column;
         align-items: stretch;
+        min-height: auto;
     }
 
     .header h1 {
