@@ -342,7 +342,7 @@ th {
 }
 
 .pie-chart-container {
-    max-width: 400px;
+    max-width: 800px;
     margin: 0 auto;
 }
 
@@ -361,22 +361,30 @@ th {
 
 #profitability-card th:nth-child(1),
 #profitability-card td:nth-child(1) {
-    width: 44%; /* Give product more space */
+    width: 35%; /* Producto */
+}
+
+#profitability-card th:nth-child(2),
+#profitability-card td:nth-child(2) {
+    width: 15%; /* Unidades vendidas */
+    text-align: right;
 }
 
 #profitability-card th:nth-child(3),
 #profitability-card td:nth-child(3) {
-    width: 12%; /* % Ganancia column is now more narrow */
+    width: 15%; /* % Ganancia */
     text-align: center;
 }
 
-#profitability-card th:nth-child(2),
-#profitability-card td:nth-child(2),
 #profitability-card th:nth-child(4),
-#profitability-card td:nth-child(4),
+#profitability-card td:nth-child(4) {
+    width: 17.5%; /* Ventas */
+    text-align: right;
+}
+
 #profitability-card th:nth-child(5),
 #profitability-card td:nth-child(5) {
-    width: 11%;
+    width: 17.5%; /* Ganancia */
     text-align: right;
 }
 

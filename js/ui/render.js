@@ -113,7 +113,7 @@ export function renderOrders(searchTerm = '', customerId, month, year) {
         const items = Array.isArray(o.items) ? o.items : [];
         const itemsSummary = items.map(item => {
             const product = products.find(p => p && p.id === item.productId);
-            return `${parseInt(item.quantity) || 0} x ${product ? (product.description || 'N/A') : 'N/A'}`;
+            return `${parseFloat(item.quantity) || 0} x ${product ? (product.description || 'N/A') : 'N/A'}`;
         }).join('<br>');
         const status = o.status || 'N/A';
         const statusClass = `status-${status.toLowerCase()}`;

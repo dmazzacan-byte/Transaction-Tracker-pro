@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let total = 0;
         document.querySelectorAll('#order-items-container .item').forEach(itemDiv => {
             const productId = itemDiv.querySelector('.item-product').value;
-            const quantity = parseInt(itemDiv.querySelector('.item-quantity').value);
+            const quantity = parseFloat(itemDiv.querySelector('.item-quantity').value);
             const priceType = itemDiv.querySelector('.item-price-type').value;
             const { products } = getState();
             const product = products.find(p => p.id === productId);
