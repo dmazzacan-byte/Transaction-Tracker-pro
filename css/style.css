@@ -342,6 +342,44 @@ th {
     margin: 0 auto;
 }
 
+/* Specific widths for Profitability Table */
+#profitability-card table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+#profitability-card th, #profitability-card td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.9rem;
+    white-space: normal;
+    word-break: break-word;
+}
+
+#profitability-card th:nth-child(1),
+#profitability-card td:nth-child(1) {
+    width: 36%;
+}
+
+#profitability-card th:nth-child(2),
+#profitability-card td:nth-child(2),
+#profitability-card th:nth-child(3),
+#profitability-card td:nth-child(3),
+#profitability-card th:nth-child(4),
+#profitability-card td:nth-child(4),
+#profitability-card th:nth-child(5),
+#profitability-card td:nth-child(5) {
+    width: 16%;
+    text-align: right;
+}
+
+#profitability-card input.profit-percentage {
+    width: 100%;
+    max-width: 60px;
+    padding: 0.2rem;
+    margin: 0;
+    text-align: right;
+}
+
 /* --- Standard Toolbar for Headers --- */
 .standard-toolbar {
     display: flex;
