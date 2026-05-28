@@ -281,13 +281,60 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         } else { // New payment
-            await saveOrUpdate('payments', null, data);
-            if (order) {
-                const newAmountPaid = (order.amountPaid || 0) + amount;
+            let remainingAmount = amount;
+
+            if (order && remainingAmount > (order.total - (order.amountPaid || 0))) {
+                // Payment overflow logic
+                const balance = order.total - (order.amountPaid || 0);
+
+                // 1. Pay off current order
+                await saveOrUpdate('payments', null, { ...data, amount: balance });
                 await saveOrUpdate('orders', order.id, {
-                    amountPaid: newAmountPaid,
-                    status: newAmountPaid >= order.total ? 'Paid' : 'Partial'
+                    amountPaid: order.total,
+                    status: 'Paid'
                 });
+
+                remainingAmount -= balance;
+
+                // 2. Find other pending orders for the same customer that are newer or same date, sorted by date (oldest first)
+                const otherPendingOrders = orders
+                    .filter(o => o.customerId === order.customerId && o.id !== order.id && o.status !== 'Paid' && new Date(o.date) >= new Date(order.date))
+                    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                for (const otherOrder of otherPendingOrders) {
+                    if (remainingAmount <= 0) break;
+
+                    const otherBalance = otherOrder.total - (otherOrder.amountPaid || 0);
+                    const paymentToApply = Math.min(remainingAmount, otherBalance);
+
+                    await saveOrUpdate('payments', null, {
+                        ...data,
+                        orderId: otherOrder.id,
+                        amount: paymentToApply
+                    });
+
+                    const newAmountPaid = (otherOrder.amountPaid || 0) + paymentToApply;
+                    await saveOrUpdate('orders', otherOrder.id, {
+                        amountPaid: newAmountPaid,
+                        status: newAmountPaid >= otherOrder.total ? 'Paid' : 'Partial'
+                    });
+
+                    remainingAmount -= paymentToApply;
+                }
+
+                // 3. If there is still remaining amount (overpayment beyond all orders)
+                // We could just leave it as is or handle it, but per instructions we just apply to following orders.
+                // If it exceeds all orders, the current logic stops at the last one.
+            } else {
+                // Standard payment logic
+                await saveOrUpdate('payments', null, data);
+                if (order) {
+                    const newAmountPaid = (order.amountPaid || 0) + amount;
+                    await saveOrUpdate('orders', order.id, {
+                        amountPaid: newAmountPaid,
+                        status: newAmountPaid >= order.total ? 'Paid' : 'Partial'
+                    });
+                }
             }
         }
         await initApp();
